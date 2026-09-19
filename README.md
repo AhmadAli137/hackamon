@@ -22,7 +22,8 @@ Electric. Super effective hits do 1.5x, resisted hits 0.5x.
 
 ## Playing
 
-- Launch: a title screen with a rainbow LED chase. A starts.
+- Launch: a title screen where the four Pokemon parade across a night sky, each posing
+  centre stage with its element's effects and LED colour. A wipes to the home screen.
 - Home: **SCAN** turns on the NFC reader. **SWITCH LEAD** picks which Pokemon goes first.
   **HACKADEX** lists all four Pokemon: caught ones are starred, seen ones show their sprite
   and stats, unseen ones show as ???.

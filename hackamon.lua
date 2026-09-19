@@ -17,7 +17,7 @@ local TN={"FIRE","WATER","GRASS","ELECTRIC"}
 local S,cur,act,owned,seen,nfc,nxt,job=0,1,1,1,1,false,0,0
 local me,en,team={},{},{}
 local q,qi,after={},0,nil
-local R,EN,EB,EH,EI,PN,PB,PH,PI,MSG,MENU
+local R,BGB,EN,EB,EH,EI,PN,PB,PH,PI,MSG,MENU
 
 local function own(i) return (owned//BIT[i])%2==1 end
 local function met(i) return (seen//BIT[i])%2==1 end
@@ -59,17 +59,21 @@ local function say(f) after=f S=4 MENU:set_text("") advance() end
 local function home()
   S=0 cur=1 en={} me=side(act) gc()
   local n=0 for i=1,4 do if own(i) then n=n+1 end end
-  EN:style({text_font=16}) EN:set_text("Team "..n.."/4") EH:set_text("") EB:hidden(true) EI:hidden(true)
+  BGB:style({bg_color=0xf8f8f0}) PI:hidden(false)
+  EN:style({text_font=16,text_color=0x101010}) EN:set_text("Team "..n.."/4") EH:style({text_color=0x101010}) EH:set_text("")
+  EB:hidden(true) EI:hidden(true)
   PI:set_src(spr(act,true)) bars(P[act][1],me.hp,me.max,0)
   MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD","HACKADEX"})
   FX.idle(P[act][3]) FX.mode("home") log("home")
 end
 -- Title screen on launch.
 local function title()
-  S=7 EB:hidden(true) EI:hidden(true) PI:set_src(spr(act,true)) bars(P[act][1],P[act][2],P[act][2],0)
-  EN:style({text_font=24}) EN:set_text("HACKAMON") EH:set_text("Scan. Battle. Catch.")
+  S=7 EB:hidden(true) PB:hidden(true) PI:hidden(true) PN:set_text("") PH:set_text("")
+  BGB:style({bg_color=0x101838})
+  EN:style({text_font=24,text_color=0xffd000}) EN:set_text("HACKAMON")
+  EH:style({text_color=0x80c0ff}) EH:set_text("Scan. Battle. Catch.")
   MSG:set_text("Press A\nto start") MENU:set_text("")
-  FX.idle(P[act][3]) FX.mode("title")
+  FX.mode("title")
 end
 -- Hackadex: reuses the enemy panel and image widget, so it costs no extra widgets.
 local function dex()
@@ -167,7 +171,7 @@ end
 local function start()
   EI=badge.ui.image(R,spr(1,false)) EI:align("top_right",-10,6)
   PI=badge.ui.image(R,spr(act,true)) PI:align("bottom_left",14,-70)
-  FX.init(R,EI,PI) title()
+  FX.init(R,EI,PI,EN) title()
 end
 
 function on_enter(root)
@@ -185,7 +189,7 @@ function on_enter(root)
   local function hb(al,x,y)
     local b=badge.ui.bar(root,0,100,100) b:set_size(110,8) b:align(al,x,y) b:style({bg_color=0xc8c8c0},"main") return b
   end
-  local bg=badge.ui.box(root,320,240) bg:style({bg_color=0xf8f8f0,border_width=0,radius=0}) bg:align("center",0,0)
+  BGB=badge.ui.box(root,320,240) BGB:style({bg_color=0xf8f8f0,border_width=0,radius=0}) BGB:align("center",0,0)
   EN=lbl(16,"top_left",8,6) EB=hb("top_left",8,28) EH=lbl(14,"top_left",8,40)
   PN=lbl(16,"bottom_right",-8,-112) PB=hb("bottom_right",-8,-98) PH=lbl(16,"bottom_right",-8,-76)
   local d=badge.ui.box(root,288,60)
@@ -232,7 +236,7 @@ function on_button(b,k)
   elseif S==6 then
     if up then cur=(cur+2)%4+1 dex() elseif dn then cur=cur%4+1 dex() elseif B or A then home() end
   elseif S==7 then
-    if A then home() end
+    if A then S=8 FX.wipe(function() PB:hidden(false) home() end) end
   elseif S==2 then
     if B then scan(false) home() end
   elseif S==3 then
