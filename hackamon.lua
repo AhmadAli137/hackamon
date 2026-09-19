@@ -59,7 +59,7 @@ end
 local function say(f) after=f S=4 MENU:set_text("") advance() end
 
 local function home()
-  S=0 cur=1 en={} me=side(act)
+  S=0 cur=1 en={} me=side(act) gc()
   EN:set_text("") EH:set_text("") EB:hidden(true) EI:hidden(true)
   PI:set_src(spr(act,true)) bars(P[act][1],me.hp,me.max,0)
   MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD"})
@@ -155,6 +155,9 @@ end
 
 function on_enter(root)
   R=root gc()
+  -- Default GC waits for memory to double before finishing a cycle; with 49 KB live
+  -- and 20 KB spare that never happens and garbage eats the heap. Collect continuously.
+  collectgarbage("setpause",100) collectgarbage("setstepmul",400)
   P=require("data") FX=require("fx") gc()
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1)
   if not own(act) then act=1 end
@@ -200,6 +203,7 @@ end
 
 function on_button(b,k)
   if k~=badge.input.KIND.PRESSED then return end
+  gc()
   local I=badge.input.BUTTON
   local up,dn,A,B=b==I.UP,b==I.DOWN,b==I.A,b==I.B
   if S==0 then
