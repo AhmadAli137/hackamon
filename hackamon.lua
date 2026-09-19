@@ -16,7 +16,6 @@ local BIT,SUP,TP={1,2,4,8},{3,1,2,2},{"fire","water","grass","elec"}
 local S,cur,act,owned,nfc,nxt,job=0,1,1,1,false,0,0
 local me,en,team={},{},{}
 local q,qi,after={},0,nil
-local fov,fend
 local R,EN,EB,EH,EI,EO,PN,PB,PH,PI,PO,MSG,MENU
 
 local function own(i) return (owned//BIT[i])%2==1 end
@@ -48,10 +47,7 @@ local function advance()
   if qi<#q then
     qi=qi+1 local e=q[qi]
     MSG:set_text(e[1]) bars(e[2],e[3],e[4],e[5])
-    if e[7] then
-      FX.start(e[7],e[6])
-      if FX.hit(e[7]) then fov=(e[6]=="me") and PO or EO fov:hidden(false) fend=badge.sys.ms()+220 end
-    end
+    if e[7] then FX.start(e[7],e[6]) end
     return
   end
   q,qi={},0 local f=after after=nil if f then f() end
@@ -84,9 +80,9 @@ local function use(u,t,mv,who)
     local dmg=math.max(1,(mv[2]+badge.sys.random(3))*e//2)
     if t.def>0 then dmg=math.max(1,dmg//2) end
     t.hp=math.max(0,t.hp-dmg)
-    push(u.name.." used\n"..mv[1].."!",who,TP[a])
+    push(u.name.." used\n"..mv[1].."!",who,TP[a]..(mv[3] and "L" or ""))
     if e==3 then push("It's super\neffective!") elseif e==1 then push("It's not very\neffective...") end
-  else push(u.name.." used\n"..mv[1].."!") end
+  else push(u.name.." used\n"..mv[1].."!",who,TP[a].."L") end
   local fx,self=mv[3],who=="me" and "en" or "me"
   if fx=="burn" and t.burn==0 then t.burn=3 push(t.name.."\nwas burned!",who,"burn")
   elseif fx=="def" then u.def=3 push(u.name.."\nwithdrew into\nits shell!",self,"def")
@@ -150,7 +146,7 @@ local function start()
   EI=badge.ui.image(R,spr(1,false)) EI:align("top_right",-10,6)
   PI=badge.ui.image(R,spr(act,true)) PI:align("bottom_left",14,-70)
   EO=FX.shade(R,"top_right",-10,6) PO=FX.shade(R,"bottom_left",14,-70)
-  FX.init(EI,PI) home()
+  FX.init(EI,PI,EO,PO) home()
 end
 
 function on_enter(root)
@@ -191,7 +187,6 @@ function on_tick()
     return
   end
   FX.tick(now)
-  if fov and now>=fend then fov:hidden(true) fov=nil end
   if S~=2 or not nfc or now<nxt then return end
   nxt=now+300
   if not badge.nfc.card() then return end
@@ -233,7 +228,7 @@ function on_button(b,k)
       me=side(i) me.hp=team[i] PI:set_src(spr(i,true))
       push("Go! "..P[i][1].."!") turn()
     end
-  elseif S==4 and A then advance() end
+  elseif S==4 and A and not FX.busy() then advance() end
 end
 
 function on_exit()
