@@ -27,7 +27,8 @@ local R,EN,EB,EH,PN,PB,PH,MSG,MENU,BG,PI
 local function own(i) return (owned//BIT[i])%2==1 end
 local function met(i) return (seen//BIT[i])%2==1 end
 local function gc() collectgarbage("collect") end
-local function spr(i,m) return (m and "m" or "s")..i..".bin" end
+-- Sprite images live in appdata, which is per badge and never included in a Share bundle.
+local function spr(i,m) return "appdata/"..(m and "m" or "s")..i..".bin" end
 local function log(t) badge.sys.log(t.." free "..badge.sys.stats().free_heap) end
 local function fx()
   if not FX then FX=require("fx") FX.init(R,EI,PI) gc() end
@@ -187,7 +188,7 @@ function on_enter(root)
   EN,EB,EH,PN,PB,PH,MSG,MENU,BG=W.EN,W.EB,W.EH,W.PN,W.PB,W.PH,W.MSG,W.MENU,W.BG
   log(_VERSION.." ui lua "..badge.sys.heap())
   -- Render sprite images once, a few rows per tick. Bump the number when sprites change.
-  if badge.store.get_int("imgs",0)~=3 then
+  if badge.store.get_int("imgs",0)~=4 then
     S=9 job=1 EB:hidden(true) PB:hidden(true) MSG:set_text("First launch:\npreparing\nsprites...")
   else start() end
 end
@@ -198,7 +199,7 @@ function on_tick()
     local k=(job-1)//4+1
     require("gen")(require("sprites"),(k+1)//2,k%2==0,spr((k+1)//2,k%2==0),(job-1)%4+1)
     job=job+1 gc()
-    if job>32 then badge.store.set_int("imgs",3) start() end
+    if job>32 then badge.store.set_int("imgs",4) start() end
     return
   end
   if TITLE and TITLE.tick(now) then TITLE=nil gc() log("title dropped") end
