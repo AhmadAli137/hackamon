@@ -70,6 +70,7 @@ If it says `main.lua is not a regular file`, the code file in the workspace is n
 
 On first launch the game renders each sprite into an image file inside the app folder
 (`s1.bin` to `s4.bin` for the enemy view, `m1.bin` to `m4.bin` for the mirrored player
-view, 50x50 each, about 40 KB total). That takes a second once, then every launch is instant. If you
+view, 50x50 each, about 40 KB total). The screen says "First launch: preparing sprites"
+for a few seconds while that happens, then every later launch is instant. If you
 change a sprite in `data.lua`, delete the matching `.bin` files in the IDE console, for
 example `rm /littlefs/apps/hackamon/s2.bin`, so they get rebuilt.

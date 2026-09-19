@@ -13,7 +13,8 @@ wake_lock=1
 -- Needs data.lua (Pokemon stats and sprites), fx.lua (light shows and sprite
 -- motion) and gen.lua (first-launch sprite renderer) in the same app folder.
 -- On first launch each sprite is rendered once into a 50x50 image file (s1.bin
--- enemy view, m1.bin mirrored player view) so a sprite costs one widget.
+-- enemy view, m1.bin mirrored player view), a few rows per tick, so a sprite
+-- costs one widget and no callback runs past its deadline.
 
 local P,FX
 local TPAT={"fire","water","grass","elec"}
@@ -175,45 +176,64 @@ local function scan(on)
   elseif nfc then badge.nfc.disable() nfc=false end
 end
 
+local ROOT,job=nil,0
+
+local function shade(w,al,x,y)
+  local b=badge.ui.box(ROOT,w,w) b:style({bg_color=0x000000,bg_opa=150,border_width=0,radius=0}) b:align(al,x,y) b:hidden(true) return b
+end
+
+-- Create the sprite widgets once the image files exist, then go home.
+local function start()
+  EI=badge.ui.image(ROOT,sprite(1,false)) EI:align("top_right",-10,6)
+  PI=badge.ui.image(ROOT,sprite(act,true)) PI:align("bottom_left",14,-70)
+  EO=shade(50,"top_right",-10,6) PO=shade(50,"bottom_left",14,-70)
+  FX.init(EI,PI)
+  home()
+end
+
 function on_enter(root)
+  ROOT=root
   -- Clear the compiler's garbage before anything else is loaded.
   gc()
   P=require("data") gc()
+  FX=require("fx") gc()
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1)
   if not own(act) then act=1 end
-  -- Render sprite images once; bump the version number whenever data.lua sprites change.
-  -- gen.lua is only loaded on that first launch so it never sits in RAM during play.
-  if badge.store.get_int("imgs",0)~=3 then
-    local build=require("gen")
-    for i=1,4 do build(P,i,false,sprite(i,false)) gc() build(P,i,true,sprite(i,true)) gc() end
-    badge.store.set_int("imgs",3)
-  end
-  FX=require("fx") gc()
   local function lbl(font,al,x,y)
     local l=badge.ui.label(root,"") l:style({text_font=font,text_color=0x101010}) l:align(al,x,y) return l
   end
   local function hbar(al,x,y)
     local b=badge.ui.bar(root,0,100,100) b:set_size(110,8) b:align(al,x,y) b:style({bg_color=0xc8c8c0},"main") return b
   end
-  local function shade(w,al,x,y)
-    local b=badge.ui.box(root,w,w) b:style({bg_color=0x000000,bg_opa=150,border_width=0,radius=0}) b:align(al,x,y) b:hidden(true) return b
-  end
   local bg=badge.ui.box(root,320,240) bg:style({bg_color=BG,border_width=0,radius=0}) bg:align("center",0,0)
   EN=lbl(16,"top_left",8,6) EB=hbar("top_left",8,28) EH=lbl(14,"top_left",8,40)
-  EI=badge.ui.image(root,sprite(1,false)) EI:align("top_right",-10,6)
-  PI=badge.ui.image(root,sprite(act,true)) PI:align("bottom_left",14,-70)
-  EO=shade(50,"top_right",-10,6) PO=shade(50,"bottom_left",14,-70) FX.init(EI,PI)
   PN=lbl(16,"bottom_right",-8,-112) PB=hbar("bottom_right",-8,-98) PH=lbl(16,"bottom_right",-8,-76)
   local dlg=badge.ui.box(root,288,60)
   dlg:style({bg_color=0xffffff,border_color=0x101010,border_width=2,radius=4,pad_all=0}) dlg:align("bottom_mid",0,-2)
   -- Fixed widths make the labels wrap and clip instead of overlapping each other.
   MSG=badge.ui.label(dlg,"") MSG:style({text_font=14,text_color=0x101010}) MSG:set_size(146,54) MSG:set_pos(8,3)
   MENU=badge.ui.label(dlg,"") MENU:style({text_font=14,text_color=0x101010}) MENU:set_size(124,54) MENU:set_pos(158,3)
-  home()
+  -- Sprite images are rendered once, spread across ticks so no callback runs long.
+  -- Bump the version number whenever data.lua sprites change.
+  if badge.store.get_int("imgs",0)~=3 then
+    S=9 job=1 EB:hidden(true) PB:hidden(true)
+    MSG:set_text("First launch:\npreparing\nsprites...")
+  else
+    start()
+  end
 end
 
 function on_tick()
   local now=badge.sys.ms()
+  if S==9 then
+    -- 8 images x 4 parts, one part per tick (about 100 ms each).
+    local k=(job-1)//4+1
+    local id,mirror=(k+1)//2,(k%2==0)
+    require("gen")(P,id,mirror,sprite(id,mirror),(job-1)%4+1)
+    job=job+1
+    if job>32 then badge.store.set_int("imgs",3) gc() PB:hidden(false) start() end
+    return
+  end
   FX.tick(now)
   if fov and now>=fend then fov:hidden(true) fov=nil end
   if S~=2 or not nfc or now<nxt then return end
@@ -265,5 +285,5 @@ function on_exit()
   badge.led.clear() badge.led.show()
   if nfc then badge.nfc.disable() end
   -- Drop the image widgets first so their decoded bitmaps leave the LVGL cache.
-  EI:delete() PI:delete()
+  if EI then EI:delete() PI:delete() end
 end

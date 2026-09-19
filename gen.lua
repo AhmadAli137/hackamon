@@ -1,7 +1,8 @@
 -- Sprite image renderer. Loaded by main.lua only when the image files need
--- (re)building, so it is not resident during normal play.
--- Streams an LVGL v9 RGB565 image to flash five rows at a time. Scale is 2.5x:
--- columns and rows alternate 3 and 2 pixels, so a 20x20 sprite becomes 50x50.
+-- (re)building. Each call renders one quarter (five rows) of one image, so it
+-- can be spread across ticks without hitting a callback deadline.
+-- Output is an LVGL v9 RGB565 image at 2.5x: columns and rows alternate 3 and
+-- 2 pixels, so a 20x20 sprite becomes 50x50.
 local N,BG=20,0xf8f8f0
 
 local function px16(c)
@@ -9,11 +10,10 @@ local function px16(c)
   return string.char(v%256,v//256)
 end
 
-return function(P,id,mirror,name)
+return function(P,id,mirror,name,part)
   local pal,spr=P[id][6],P[id][7]
-  badge.fs.write(name,string.char(0x19,0x12,0,0,50,0,50,0,100,0,0,0))
-  local cache,chunk={},{}
-  for y=1,N do
+  local cache,rows={},{}
+  for y=(part-1)*5+1,part*5 do
     local o,parts=(y-1)*N,{}
     for x=1,N do
       local xx=mirror and (N+1-x) or x
@@ -23,7 +23,9 @@ return function(P,id,mirror,name)
       if not px then px=string.rep(px16(ch=="." and BG or pal[ch]),wd) cache[ch..wd]=px end
       parts[x]=px
     end
-    chunk[#chunk+1]=string.rep(table.concat(parts),(y%2==1) and 3 or 2)
-    if #chunk==5 then badge.fs.append(name,table.concat(chunk)) chunk={} badge.sys.gc_step() end
+    rows[#rows+1]=string.rep(table.concat(parts),(y%2==1) and 3 or 2)
   end
+  local data=table.concat(rows)
+  if part==1 then badge.fs.write(name,string.char(0x19,0x12,0,0,50,0,50,0,100,0,0,0)..data)
+  else badge.fs.append(name,data) end
 end
