@@ -9,21 +9,27 @@ wake_lock=1
 -- HACKAMON. Start with PIKACHU. Scan stickers PKM01 (Charmander), PKM02 (Squirtle),
 -- PKM03 (Bulbasaur) to battle wild Pokemon; win to add them to your team. If one of
 -- yours faints you lose the whole team. UP/DOWN cursor, A select / next line, B back / run.
--- Needs data.lua, fx.lua and gen.lua in the same app folder. Sprites are rendered to
--- 50x50 image files on first launch (s1..s4 enemy view, m1..m4 mirrored player view).
+-- The badge only has RAM for the code a screen needs, so one-shot code is loaded, used
+-- and dropped: ui.lua (widgets), title.lua (parade + wipe), gen.lua + sprites.lua (first
+-- launch render). data.lua (stats) and fx.lua (battle lights, motion) stay resident.
 local P,FX
 local BIT,SUP,TP={1,2,4,8},{3,1,2,2},{"fire","water","grass","elec"}
 local TN={"FIRE","WATER","GRASS","ELECTRIC"}
 local S,cur,act,owned,seen,nfc,nxt,job=0,1,1,1,1,false,0,0
 local me,en,team={},{},{}
 local q,qi,after={},0,nil
-local R,BGB,EN,EB,EH,EI,PN,PB,PH,PI,MSG,MENU
+local R,EN,EB,EH,PN,PB,PH,MSG,MENU,BG,PI
+-- W (widgets), EI (enemy image), UI_ROOT and TITLE are globals shared with the one-shot modules.
 
 local function own(i) return (owned//BIT[i])%2==1 end
 local function met(i) return (seen//BIT[i])%2==1 end
 local function gc() collectgarbage("collect") end
 local function spr(i,m) return (m and "m" or "s")..i..".bin" end
 local function log(t) badge.sys.log(t.." free "..badge.sys.stats().free_heap) end
+local function fx()
+  if not FX then FX=require("fx") FX.init(R,EI,PI) gc() end
+  return FX
+end
 
 local function bar(b,h,m)
   b:set_range(0,m) b:set_value(h)
@@ -57,23 +63,14 @@ end
 local function say(f) after=f S=4 MENU:set_text("") advance() end
 
 local function home()
-  S=0 cur=1 en={} me=side(act) gc()
+  S=0 cur=1 en={} me=side(act) gc() fx()
   local n=0 for i=1,4 do if own(i) then n=n+1 end end
-  BGB:style({bg_color=0xf8f8f0}) PI:hidden(false)
-  EN:style({text_font=16,text_color=0x101010}) EN:set_text("Team "..n.."/4") EH:style({text_color=0x101010}) EH:set_text("")
-  EB:hidden(true) EI:hidden(true)
+  BG:style({bg_color=0xf8f8f0}) PI:hidden(false) EB:hidden(true) EI:hidden(true) PB:hidden(false)
+  EN:style({text_font=16,text_color=0x101010}) EN:set_text("Team "..n.."/4")
+  EH:style({text_color=0x101010}) EH:set_text("")
   PI:set_src(spr(act,true)) bars(P[act][1],me.hp,me.max,0)
   MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD","HACKADEX"})
   FX.idle(P[act][3]) FX.mode("home") log("home")
-end
--- Title screen on launch.
-local function title()
-  S=7 EB:hidden(true) PB:hidden(true) PI:hidden(true) PN:set_text("") PH:set_text("")
-  BGB:style({bg_color=0x101838})
-  EN:style({text_font=24,text_color=0xffd000}) EN:set_text("HACKAMON")
-  EH:style({text_color=0x80c0ff}) EH:set_text("Scan. Battle. Catch.")
-  MSG:set_text("Press A\nto start") MENU:set_text("")
-  FX.mode("title")
 end
 -- Hackadex: reuses the enemy panel and image widget, so it costs no extra widgets.
 local function dex()
@@ -167,37 +164,26 @@ local function scan(on)
     else MSG:set_text("NFC reader\nunavailable.") end
   elseif nfc then badge.nfc.disable() nfc=false end
 end
--- Create the sprite widgets once the image files exist, then go home.
+-- Sprite widgets need the image files, so they are created here; then the title runs.
 local function start()
   EI=badge.ui.image(R,spr(1,false)) EI:align("top_right",-10,6)
-  PI=badge.ui.image(R,spr(act,true)) PI:align("bottom_left",14,-70)
-  FX.init(R,EI,PI,EN) title()
+  PI=badge.ui.image(R,spr(act,true)) PI:align("bottom_left",14,-70) PI:hidden(true)
+  S=7 require("title") gc()
 end
 
 function on_enter(root)
   R=root gc()
-  -- Default GC waits for memory to double before finishing a cycle; with 49 KB live
-  -- and 20 KB spare that never happens and garbage eats the heap. Collect continuously.
+  -- Default GC waits for memory to double before finishing a cycle; with this much live
+  -- code and this little spare RAM that never happens. Collect continuously instead.
   if _VERSION=="Lua 5.5" then collectgarbage("param","pause",100) collectgarbage("param","stepmul",400)
   else collectgarbage("incremental",100,400) end
-  P=require("data") FX=require("fx") gc()
+  P=require("data")
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1) seen=badge.store.get_int("seen",1)
   if not own(act) then act=1 end
-  local function lbl(f,al,x,y)
-    local l=badge.ui.label(root,"") l:style({text_font=f,text_color=0x101010}) l:align(al,x,y) return l
-  end
-  local function hb(al,x,y)
-    local b=badge.ui.bar(root,0,100,100) b:set_size(110,8) b:align(al,x,y) b:style({bg_color=0xc8c8c0},"main") return b
-  end
-  BGB=badge.ui.box(root,320,240) BGB:style({bg_color=0xf8f8f0,border_width=0,radius=0}) BGB:align("center",0,0)
-  EN=lbl(16,"top_left",8,6) EB=hb("top_left",8,28) EH=lbl(14,"top_left",8,40)
-  PN=lbl(16,"bottom_right",-8,-112) PB=hb("bottom_right",-8,-98) PH=lbl(16,"bottom_right",-8,-76)
-  local d=badge.ui.box(root,288,60)
-  d:style({bg_color=0xffffff,border_color=0x101010,border_width=2,radius=4,pad_all=0}) d:align("bottom_mid",0,-2)
-  MSG=badge.ui.label(d,"") MSG:style({text_font=14,text_color=0x101010}) MSG:set_size(146,54) MSG:set_pos(8,3)
-  MENU=badge.ui.label(d,"") MENU:style({text_font=14,text_color=0x101010}) MENU:set_size(124,54) MENU:set_pos(158,3)
+  UI_ROOT=root W=require("ui") gc()
+  EN,EB,EH,PN,PB,PH,MSG,MENU,BG=W.EN,W.EB,W.EH,W.PN,W.PB,W.PH,W.MSG,W.MENU,W.BG
   log(_VERSION.." ui lua "..badge.sys.heap())
-  -- Render sprite images once, a few rows per tick. Bump the number when data.lua sprites change.
+  -- Render sprite images once, a few rows per tick. Bump the number when sprites change.
   if badge.store.get_int("imgs",0)~=3 then
     S=9 job=1 EB:hidden(true) PB:hidden(true) MSG:set_text("First launch:\npreparing\nsprites...")
   else start() end
@@ -207,12 +193,13 @@ function on_tick()
   local now=badge.sys.ms()
   if S==9 then
     local k=(job-1)//4+1
-    require("gen")(P,(k+1)//2,k%2==0,spr((k+1)//2,k%2==0),(job-1)%4+1)
+    require("gen")(require("sprites"),(k+1)//2,k%2==0,spr((k+1)//2,k%2==0),(job-1)%4+1)
     job=job+1 gc()
-    if job>32 then badge.store.set_int("imgs",3) PB:hidden(false) start() end
+    if job>32 then badge.store.set_int("imgs",3) start() end
     return
   end
-  FX.tick(now)
+  if TITLE and TITLE.tick(now) then TITLE=nil gc() log("title dropped") end
+  if FX then FX.tick(now) end
   if S~=2 or not nfc or now<nxt then return end
   nxt=now+300
   if not badge.nfc.card() then return end
@@ -233,10 +220,6 @@ function on_button(b,k)
     elseif A and cur==1 then scan(true)
     elseif A and cur==3 then cur=act dex()
     elseif A then for _=1,4 do act=act%4+1 if own(act) then break end end save() home() end
-  elseif S==6 then
-    if up then cur=(cur+2)%4+1 dex() elseif dn then cur=cur%4+1 dex() elseif B or A then home() end
-  elseif S==7 then
-    if A then S=8 FX.wipe(function() PB:hidden(false) home() end) end
   elseif S==2 then
     if B then scan(false) home() end
   elseif S==3 then
@@ -260,6 +243,10 @@ function on_button(b,k)
       me=side(i) me.hp=team[i] PI:set_src(spr(i,true))
       push("Go! "..P[i][1].."!") turn()
     end
+  elseif S==6 then
+    if up then cur=(cur+2)%4+1 dex() elseif dn then cur=cur%4+1 dex() elseif B or A then home() end
+  elseif S==7 then
+    if A then S=8 TITLE.go(home) end
   elseif S==4 and A and not FX.busy() then advance() end
 end
 
