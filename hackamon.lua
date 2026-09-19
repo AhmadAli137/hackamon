@@ -34,7 +34,12 @@ local function sprite(id,mirror) return (mirror and "m" or "s")..id..".bin" end
 -- Swap an image and log free RAM, to catch decode failures when memory is short.
 local function show(w,name) w:set_src(name) badge.sys.log(name.." free "..badge.sys.stats().free_heap) end
 
-local function gc() if collectgarbage then collectgarbage("collect") else for _=1,40 do badge.sys.gc_step() end end end
+-- Full collection. collectgarbage may be absent in the sandbox; incremental steps
+-- need hundreds of calls to finish a cycle on a heap this size.
+local function gc()
+  if collectgarbage then collectgarbage("collect") collectgarbage("collect")
+  else for _=1,400 do badge.sys.gc_step() end end
+end
 
 local function bar(b,hp,max)
   b:set_range(0,max) b:set_value(hp)
@@ -197,6 +202,7 @@ function on_enter(root)
   gc()
   P=require("data") gc()
   FX=require("fx") gc()
+  badge.sys.log("gc "..tostring(collectgarbage~=nil).." lua "..badge.sys.heap().." free "..badge.sys.stats().free_heap)
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1)
   if not own(act) then act=1 end
   local function lbl(font,al,x,y)
@@ -230,7 +236,7 @@ function on_tick()
     local k=(job-1)//4+1
     local id,mirror=(k+1)//2,(k%2==0)
     require("gen")(P,id,mirror,sprite(id,mirror),(job-1)%4+1)
-    job=job+1
+    job=job+1 gc()
     if job>32 then badge.store.set_int("imgs",3) gc() PB:hidden(false) start() end
     return
   end
