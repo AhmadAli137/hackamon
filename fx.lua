@@ -16,6 +16,7 @@ local RB={0xff0000,0xff6000,0xffc000,0x00ff20,0x0040ff,0x8000ff}
 local PC={fire={0xff4000,0xffc000},water={0x40a0ff,0xd0f0ff},grass={0x20c040,0x90e060},elec={0xffe000,0xffffff}}
 local PS={fire={8,8,4},water={9,9,4},grass={11,5,2},elec={4,12,1}}
 local PB={}
+local PT={4,1,2,3}         -- type of Pokemon 1..4, for the parade
 
 local function set(i,c,k) badge.led.set(i,(c//65536)*k//255,((c//256)%256)*k//255,(c%256)*k//255) end
 local function place(w,en,dx,dy)
@@ -82,7 +83,7 @@ local function parade(t)
   else dx=-135-200*(u-1400)//500 end
   local dy=(u>=500 and u<1400) and -math.floor(6*math.abs(math.sin((u-500)/150))) or 0
   place(EI,true,dx,dy+60)
-  local kind=TYPE[({4,1,2,3})[k]]
+  local kind=TYPE[PT[k]]
   if u>=600 and u<1300 then particles(true,u-600,kind) else hidep() end
   local c=C[kind]
   if u>=500 and u<1400 then
