@@ -22,6 +22,7 @@ Electric. Super effective hits do 1.5x, resisted hits 0.5x.
 
 ## Playing
 
+- Launch: a title screen with a rainbow LED chase. A starts.
 - Home: **SCAN** turns on the NFC reader. **SWITCH LEAD** picks which Pokemon goes first.
   **HACKADEX** lists all four Pokemon: caught ones are starred, seen ones show their sprite
   and stats, unseen ones show as ???.
@@ -30,7 +31,7 @@ Electric. Super effective hits do 1.5x, resisted hits 0.5x.
   drop in step with the text. The attacker lunges, the target shakes and darkens, and
   the LEDs play in the move's colour. Attack moves are quick: a triple flash and an instant
   hit. Special moves are long: three laps around the LED ring, then all six hold for the
-  impact. Flames, bubbles, leaves or sparks burst over the Pokemon that gets hit.
+  impact. The struck Pokemon blinks and flames, bubbles, leaves or sparks burst over it.
 - **SWITCH** appears in the battle menu once you own more than one Pokemon. Switching
   uses your turn.
 - Every battle starts with your whole team at full HP.

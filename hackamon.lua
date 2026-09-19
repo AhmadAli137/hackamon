@@ -17,7 +17,7 @@ local TN={"FIRE","WATER","GRASS","ELECTRIC"}
 local S,cur,act,owned,seen,nfc,nxt,job=0,1,1,1,1,false,0,0
 local me,en,team={},{},{}
 local q,qi,after={},0,nil
-local R,EN,EB,EH,EI,EO,PN,PB,PH,PI,PO,MSG,MENU
+local R,EN,EB,EH,EI,PN,PB,PH,PI,MSG,MENU
 
 local function own(i) return (owned//BIT[i])%2==1 end
 local function met(i) return (seen//BIT[i])%2==1 end
@@ -58,14 +58,22 @@ local function say(f) after=f S=4 MENU:set_text("") advance() end
 
 local function home()
   S=0 cur=1 en={} me=side(act) gc()
-  EN:set_text("") EH:set_text("") EB:hidden(true) EI:hidden(true)
+  local n=0 for i=1,4 do if own(i) then n=n+1 end end
+  EN:style({text_font=16}) EN:set_text("Team "..n.."/4") EH:set_text("") EB:hidden(true) EI:hidden(true)
   PI:set_src(spr(act,true)) bars(P[act][1],me.hp,me.max,0)
   MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD","HACKADEX"})
-  FX.idle(P[act][3]) log("home")
+  FX.idle(P[act][3]) FX.mode("home") log("home")
+end
+-- Title screen on launch.
+local function title()
+  S=7 EB:hidden(true) EI:hidden(true) PI:set_src(spr(act,true)) bars(P[act][1],P[act][2],P[act][2],0)
+  EN:style({text_font=24}) EN:set_text("HACKAMON") EH:set_text("Scan. Battle. Catch.")
+  MSG:set_text("Press A\nto start") MENU:set_text("")
+  FX.idle(P[act][3]) FX.mode("title")
 end
 -- Hackadex: reuses the enemy panel and image widget, so it costs no extra widgets.
 local function dex()
-  S=6
+  S=6 FX.mode(nil)
   local i,s=cur,met(cur)
   EI:hidden(not s) if s then EI:set_src(spr(i,false)) end
   EN:set_text(s and P[i][1] or "???") EH:set_text(s and ("HP "..P[i][2].."  "..TN[P[i][3]]) or "")
@@ -140,7 +148,7 @@ local function turn()
   say(f)
 end
 local function encounter(i)
-  en=side(i,true) team={}
+  en=side(i,true) team={} FX.mode(nil)
   if not met(i) then seen=seen+BIT[i] save() end
   for j=1,4 do if own(j) then team[j]=P[j][2] end end
   me=side(act)
@@ -159,8 +167,7 @@ end
 local function start()
   EI=badge.ui.image(R,spr(1,false)) EI:align("top_right",-10,6)
   PI=badge.ui.image(R,spr(act,true)) PI:align("bottom_left",14,-70)
-  EO=FX.shade(R,"top_right",-10,6) PO=FX.shade(R,"bottom_left",14,-70)
-  FX.init(R,EI,PI,EO,PO) home()
+  FX.init(R,EI,PI) title()
 end
 
 function on_enter(root)
@@ -224,6 +231,8 @@ function on_button(b,k)
     elseif A then for _=1,4 do act=act%4+1 if own(act) then break end end save() home() end
   elseif S==6 then
     if up then cur=(cur+2)%4+1 dex() elseif dn then cur=cur%4+1 dex() elseif B or A then home() end
+  elseif S==7 then
+    if A then home() end
   elseif S==2 then
     if B then scan(false) home() end
   elseif S==3 then

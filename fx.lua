@@ -1,11 +1,12 @@
--- Light shows, sprite motion and elemental particles.
+-- Light shows, sprite motion, elemental particles, title and home idle animations.
 -- LED colours are tuned for the badge's LEDs, whose green channel is far brighter than red:
 -- keep green low or orange turns yellow and yellow turns white.
 -- Left LED column {1,6,5} is your side, right {2,3,4} the enemy's.
 local M={}
 local L,R={1,6,5},{2,3,4}
-local ROOT,EI,PI,EO,PO,pat,long,side,t0,dur
-local idle=0
+local ROOT,EI,PI,pat,long,side,t0,dur
+local idle,mode,mt=0,nil,0
+local RB={0xff0000,0xff6000,0xffc000,0x00ff20,0x0040ff,0x8000ff}
 local C={fire=0xff1800,water=0x0030ff,grass=0x08d020,elec=0xffa000,burn=0xff0800,seed=0x08c018,par=0xffa000,def=0x1060ff,win=0x00ff30,lose=0xff0000,appear=0xffffff}
 local TYPE={"fire","water","grass","elec"}
 local MOVE={fire=1,water=1,grass=1,elec=1}
@@ -25,11 +26,10 @@ local function pbox(i)
 end
 local function hidep() for i=1,#PB do PB[i]:hidden(true) end end
 
-function M.init(root,ei,pi,eo,po) ROOT,EI,PI,EO,PO=root,ei,pi,eo,po end
+function M.init(root,ei,pi) ROOT,EI,PI=root,ei,pi end
+-- "title" = rainbow chase, "home" = breathing glow and bobbing lead sprite, nil = still
+function M.mode(m) mode,mt=m,badge.sys.ms() if not m then place(PI,false,0,0) end end
 function M.busy() return pat~=nil end
-function M.shade(root,al,x,y)
-  local b=badge.ui.box(root,50,50) b:style({bg_color=0,bg_opa=150,border_width=0,radius=0}) b:align(al,x,y) b:hidden(true) return b
-end
 -- idle glow by Pokemon type index (1 fire 2 water 3 grass 4 electric)
 function M.idle(t) idle=C[TYPE[t]] or idle if not pat then for i=1,6 do set(i,idle,200) end badge.led.show() end end
 
@@ -59,13 +59,23 @@ local function particles(en,h)
 end
 
 function M.tick(now)
-  if not pat then return end
+  if not pat then
+    local t=now-mt
+    if mode=="title" then
+      for i=1,6 do set(i,RB[((t//150)+i)%6+1],200) end badge.led.show()
+    elseif mode=="home" then
+      local k=math.floor(120+80*math.sin(t/500))
+      for i=1,6 do set(i,idle,k) end badge.led.show()
+      place(PI,false,0,-math.floor(2+2*math.sin(t/300)))
+    end
+    return
+  end
   local t=now-t0
   if t>=dur then
-    pat=nil M.idle(0) place(EI,true,0,0) place(PI,false,0,0) EO:hidden(true) PO:hidden(true) hidep() return
+    pat=nil M.idle(0) place(EI,true,0,0) place(PI,false,0,0) EI:hidden(false) PI:hidden(false) hidep() mt=now return
   end
   local c,tg=C[pat],(side=="en") and R or L
-  local to=(side=="en") and EO or PO
+  local tw=(side=="en") and EI or PI
   badge.led.clear()
   if MOVE[pat] and long then
     if t<1500 then local i=(t//80)%6+1 set(i,c,255) set((i+4)%6+1,c,60)
@@ -88,10 +98,11 @@ function M.tick(now)
     local shake=(h>=60 and h<400) and (((t//50)%2==0) and 5 or -5) or 0
     if side=="en" then place(PI,false,lunge,-(lunge//2)) place(EI,true,shake,0)
     else place(EI,true,-lunge,lunge//2) place(PI,false,shake,0) end
-    to:hidden(not (h>=0 and h<220))
+    -- The struck sprite blinks, Game Boy style, instead of being shaded.
+    tw:hidden(h>=0 and h<360 and (h//60)%2==1)
     if h>=0 and h<450 then particles(side=="en",h) else hidep() end
   elseif pat=="burn" or pat=="seed" then
-    to:hidden(t>=220)
+    tw:hidden(t<240 and (t//60)%2==1)
   end
 end
 
