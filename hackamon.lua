@@ -10,12 +10,11 @@ wake_lock=1
 -- PKM02 (Squirtle) or PKM03 (Bulbasaur) to battle wild Pokemon. Win to add
 -- them to your team. If one of yours faints, you lose the whole team.
 -- UP/DOWN move the cursor. A selects / advances text. B goes back / runs.
--- Needs data.lua (Pokemon stats and sprites) and fx.lua (light shows and
--- sprite motion) in the same app folder.
+-- Needs data.lua (Pokemon stats and sprites), fx.lua (light shows and sprite
+-- motion) and gen.lua (first-launch sprite renderer) in the same app folder.
 -- On first launch each sprite is rendered once into a 50x50 image file (s1.bin
 -- enemy view, m1.bin mirrored player view) so a sprite costs one widget.
 
-local N,BG=20,0xf8f8f0
 local P,FX
 local TPAT={"fire","water","grass","elec"}
 local DMG={fire=1,water=1,grass=1,elec=1,burn=1,seed=1}
@@ -29,40 +28,12 @@ local EN,EB,EH,EI,EO,PN,PB,PH,PI,PO,MSG,MENU
 
 local function own(id) return (owned//BIT[id])%2==1 end
 
--- 0xRRGGBB -> little-endian RGB565 pair
-local function px16(c)
-  local v=(c//65536//8)*2048+((c//256)%256//4)*32+(c%256//8)
-  return string.char(v%256,v//256)
-end
-
--- Stream an LVGL v9 RGB565 image of the sprite to flash, five rows at a time,
--- so no large string is ever held in RAM. Scale is 2.5x: columns and rows
--- alternate 3 and 2 pixels wide, so a 20x20 sprite becomes 50x50.
-local function build(id,mirror,name)
-  local pal,spr=P[id][6],P[id][7]
-  badge.fs.write(name,string.char(0x19,0x12,0,0,50,0,50,0,100,0,0,0))
-  local cache,chunk={},{}
-  for y=1,N do
-    local o,parts=(y-1)*N,{}
-    for x=1,N do
-      local xx=mirror and (N+1-x) or x
-      local ch=string.sub(spr,o+xx,o+xx)
-      local wd=(x%2==1) and 3 or 2
-      local px=cache[ch..wd]
-      if not px then px=string.rep(px16(ch=="." and BG or pal[ch]),wd) cache[ch..wd]=px end
-      parts[x]=px
-    end
-    chunk[#chunk+1]=string.rep(table.concat(parts),(y%2==1) and 3 or 2)
-    if #chunk==5 then badge.fs.append(name,table.concat(chunk)) chunk={} end
-  end
-end
-
 local function sprite(id,mirror) return (mirror and "m" or "s")..id..".bin" end
 
 -- Swap an image and log free RAM, to catch decode failures when memory is short.
 local function show(w,name) w:set_src(name) badge.sys.log(name.." free "..badge.sys.stats().free_heap) end
 
-local function gc() if collectgarbage then collectgarbage("collect") else for _=1,20 do badge.sys.gc_step() end end end
+local function gc() if collectgarbage then collectgarbage("collect") else for _=1,40 do badge.sys.gc_step() end end end
 
 local function bar(b,hp,max)
   b:set_range(0,max) b:set_value(hp)
@@ -205,14 +176,19 @@ local function scan(on)
 end
 
 function on_enter(root)
-  P=require("data") FX=require("fx")
+  -- Clear the compiler's garbage before anything else is loaded.
+  gc()
+  P=require("data") gc()
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1)
   if not own(act) then act=1 end
   -- Render sprite images once; bump the version number whenever data.lua sprites change.
+  -- gen.lua is only loaded on that first launch so it never sits in RAM during play.
   if badge.store.get_int("imgs",0)~=3 then
-    for i=1,4 do build(i,false,sprite(i,false)) gc() build(i,true,sprite(i,true)) gc() end
+    local build=require("gen")
+    for i=1,4 do build(P,i,false,sprite(i,false)) gc() build(P,i,true,sprite(i,true)) gc() end
     badge.store.set_int("imgs",3)
   end
+  FX=require("fx") gc()
   local function lbl(font,al,x,y)
     local l=badge.ui.label(root,"") l:style({text_font=font,text_color=0x101010}) l:align(al,x,y) return l
   end
