@@ -12,7 +12,7 @@ wake_lock=1
 -- UP/DOWN move the cursor. A selects / advances text. B goes back / runs.
 -- Needs data.lua (Pokemon stats and sprites) and fx.lua (light shows and
 -- sprite motion) in the same app folder.
--- On first launch each sprite is rendered once into an image file (s1.bin
+-- On first launch each sprite is rendered once into a 50x50 image file (s1.bin
 -- enemy view, m1.bin mirrored player view) so a sprite costs one widget.
 
 local N,BG=20,0xf8f8f0
@@ -36,22 +36,23 @@ local function px16(c)
 end
 
 -- Stream an LVGL v9 RGB565 image of the sprite to flash, five rows at a time,
--- so no large string is ever held in RAM.
-local function build(id,scale,mirror,name)
+-- so no large string is ever held in RAM. Scale is 2.5x: columns and rows
+-- alternate 3 and 2 pixels wide, so a 20x20 sprite becomes 50x50.
+local function build(id,mirror,name)
   local pal,spr=P[id][6],P[id][7]
-  local W=N*scale
-  badge.fs.write(name,string.char(0x19,0x12,0,0,W%256,W//256,W%256,W//256,(W*2)%256,(W*2)//256,0,0))
+  badge.fs.write(name,string.char(0x19,0x12,0,0,50,0,50,0,100,0,0,0))
   local cache,chunk={},{}
   for y=1,N do
     local o,parts=(y-1)*N,{}
     for x=1,N do
       local xx=mirror and (N+1-x) or x
       local ch=string.sub(spr,o+xx,o+xx)
-      local px=cache[ch]
-      if not px then px=string.rep(px16(ch=="." and BG or pal[ch]),scale) cache[ch]=px end
+      local wd=(x%2==1) and 3 or 2
+      local px=cache[ch..wd]
+      if not px then px=string.rep(px16(ch=="." and BG or pal[ch]),wd) cache[ch..wd]=px end
       parts[x]=px
     end
-    chunk[#chunk+1]=string.rep(table.concat(parts),scale)
+    chunk[#chunk+1]=string.rep(table.concat(parts),(y%2==1) and 3 or 2)
     if #chunk==5 then badge.fs.append(name,table.concat(chunk)) chunk={} end
   end
 end
@@ -208,9 +209,9 @@ function on_enter(root)
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1)
   if not own(act) then act=1 end
   -- Render sprite images once; bump the version number whenever data.lua sprites change.
-  if badge.store.get_int("imgs",0)~=2 then
-    for i=1,4 do build(i,3,false,sprite(i,false)) gc() build(i,2,true,sprite(i,true)) gc() end
-    badge.store.set_int("imgs",2)
+  if badge.store.get_int("imgs",0)~=3 then
+    for i=1,4 do build(i,false,sprite(i,false)) gc() build(i,true,sprite(i,true)) gc() end
+    badge.store.set_int("imgs",3)
   end
   local function lbl(font,al,x,y)
     local l=badge.ui.label(root,"") l:style({text_font=font,text_color=0x101010}) l:align(al,x,y) return l
@@ -225,12 +226,13 @@ function on_enter(root)
   EN=lbl(16,"top_left",8,6) EB=hbar("top_left",8,28) EH=lbl(14,"top_left",8,40)
   EI=badge.ui.image(root,sprite(1,false)) EI:align("top_right",-10,6)
   PI=badge.ui.image(root,sprite(act,true)) PI:align("bottom_left",14,-70)
-  EO=shade(60,"top_right",-10,6) PO=shade(40,"bottom_left",14,-70) FX.init(EI,PI)
+  EO=shade(50,"top_right",-10,6) PO=shade(50,"bottom_left",14,-70) FX.init(EI,PI)
   PN=lbl(16,"bottom_right",-8,-112) PB=hbar("bottom_right",-8,-98) PH=lbl(16,"bottom_right",-8,-76)
   local dlg=badge.ui.box(root,288,60)
   dlg:style({bg_color=0xffffff,border_color=0x101010,border_width=2,radius=4,pad_all=0}) dlg:align("bottom_mid",0,-2)
-  MSG=badge.ui.label(dlg,"") MSG:style({text_font=16,text_color=0x101010}) MSG:set_pos(8,3)
-  MENU=badge.ui.label(dlg,"") MENU:style({text_font=16,text_color=0x101010}) MENU:set_pos(150,3)
+  -- Fixed widths make the labels wrap and clip instead of overlapping each other.
+  MSG=badge.ui.label(dlg,"") MSG:style({text_font=14,text_color=0x101010}) MSG:set_size(146,54) MSG:set_pos(8,3)
+  MENU=badge.ui.label(dlg,"") MENU:style({text_font=14,text_color=0x101010}) MENU:set_size(124,54) MENU:set_pos(158,3)
   home()
 end
 
