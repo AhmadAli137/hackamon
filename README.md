@@ -24,6 +24,9 @@ Electric. Super effective hits do 1.5x, resisted hits 0.5x.
 
 - Launch: a title screen where the four Pokemon parade across a night sky, each posing
   centre stage with its element's effects and LED colour. A wipes to the home screen.
+- HOME returns to the home screen from anywhere. **EXIT** on the home menu leaves the
+  game. Leaving fragments the badge's memory until the next reboot, so play stays inside
+  the app rather than bouncing through the launcher.
 - Home: **SCAN** turns on the NFC reader. **SWITCH LEAD** picks which Pokemon goes first.
   **HACKADEX** lists all four Pokemon: caught ones are starred, seen ones show their sprite
   and stats, unseen ones show as ???.

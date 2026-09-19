@@ -5,10 +5,13 @@ icon=PKM
 api=2
 heap_kb=96
 wake_lock=1
+home_button=1
 ]==]
 -- HACKAMON. Start with PIKACHU. Scan stickers PKM01 (Charmander), PKM02 (Squirtle),
 -- PKM03 (Bulbasaur) to battle wild Pokemon; win to add them to your team. If one of
 -- yours faints you lose the whole team. UP/DOWN cursor, A select / next line, B back / run.
+-- HOME returns to the home screen from anywhere; EXIT on the home menu leaves the game.
+-- (Exiting leaves the badge heap fragmented until reboot, so the app stays resident.)
 -- The badge only has RAM for the code a screen needs, so one-shot code is loaded, used
 -- and dropped: ui.lua (widgets), title.lua (parade + wipe), gen.lua + sprites.lua (first
 -- launch render). data.lua (stats) and fx.lua (battle lights, motion) stay resident.
@@ -69,7 +72,7 @@ local function home()
   EN:style({text_font=16,text_color=0x101010}) EN:set_text("Team "..n.."/4")
   EH:style({text_color=0x101010}) EH:set_text("")
   PI:set_src(spr(act,true)) bars(P[act][1],me.hp,me.max,0)
-  MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD","HACKADEX"})
+  MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD","HACKADEX","EXIT"})
   FX.idle(P[act][3]) FX.mode("home") log("home")
 end
 -- Hackadex: reuses the enemy panel and image widget, so it costs no extra widgets.
@@ -210,15 +213,24 @@ function on_tick()
 end
 
 function on_button(b,k)
+  local I=badge.input.BUTTON
+  -- HOME is delivered to us (home_button=1); its Released is the reliable edge.
+  if b==I.HOME then
+    if k==badge.input.KIND.RELEASED and S~=8 and S~=9 then
+      if S==7 then badge.app.exit() else scan(false) home() end
+    end
+    return
+  end
   if k~=badge.input.KIND.PRESSED then return end
   gc()
-  local I=badge.input.BUTTON
   local up,dn,A,B=b==I.UP,b==I.DOWN,b==I.A,b==I.B
   if S==0 then
-    if up then cur=(cur+1)%3+1 menu({"SCAN","SWITCH LEAD","HACKADEX"})
-    elseif dn then cur=cur%3+1 menu({"SCAN","SWITCH LEAD","HACKADEX"})
+    local hm={"SCAN","SWITCH LEAD","HACKADEX","EXIT"}
+    if up then cur=(cur+2)%4+1 menu(hm)
+    elseif dn then cur=cur%4+1 menu(hm)
     elseif A and cur==1 then scan(true)
     elseif A and cur==3 then cur=act dex()
+    elseif A and cur==4 then badge.app.exit()
     elseif A then for _=1,4 do act=act%4+1 if own(act) then break end end save() home() end
   elseif S==2 then
     if B then scan(false) home() end
