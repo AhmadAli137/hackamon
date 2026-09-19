@@ -279,4 +279,6 @@ function on_exit()
   save()
   badge.led.clear() badge.led.show()
   if nfc then badge.nfc.disable() end
+  -- Drop the image widgets first so their decoded bitmaps leave the LVGL cache.
+  EI:delete() PI:delete()
 end
