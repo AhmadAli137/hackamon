@@ -25,7 +25,10 @@ Electric. Super effective hits do 1.5x, resisted hits 0.5x.
 - Home: **SCAN** turns on the NFC reader. **SWITCH LEAD** picks which Pokemon goes first.
 - Hold a sticker to the back of the badge. A wild Pokemon appears.
 - Battle: UP/DOWN pick a move, A uses it, B runs. A advances the dialogue, and HP bars
-  drop in step with the text. A hit darkens the target for a moment.
+  drop in step with the text. The attacker lunges, the target shakes and darkens, and
+  the LEDs play a pattern for the move: orange flicker for Fire, a blue wave for Water,
+  a green chase for Grass, a yellow strobe for Electric. Burns pulse orange on the
+  burned side, Leech Seed pulses green between the two sides, Withdraw breathes blue.
 - **SWITCH** appears in the battle menu once you own more than one Pokemon. Switching
   uses your turn.
 - Every battle starts with your whole team at full HP.
@@ -46,16 +49,17 @@ phone app. Uppercase, no spaces.
 
 ## Installing
 
-The game is two files: `hackamon.lua` (manifest header plus game code) and `data.lua`
-(Pokemon stats and sprites). Splitting them keeps the Lua compiler's memory peak under
-the badge's limit.
+The game is three files: `hackamon.lua` (manifest header plus game code), `data.lua`
+(Pokemon stats and sprites) and `fx.lua` (LED light shows and sprite motion). Splitting
+them keeps the Lua compiler's memory peak under the badge's limit.
 
 1. Open the badge IDE in Chrome or Edge.
 2. **Import app**, paste the whole of `hackamon.lua` including the header, **Replace editor files**.
 3. Click **+**, name the new file exactly `data.lua`, and paste the contents of `data.lua` into it.
+   Do the same for `fx.lua`.
 4. Remove `icon.bin` from the workspace, or keep it if you want the custom icon.
 5. Badge off, USB data cable in, badge on. **Connect**, choose **USB JTAG/serial debug unit**.
-6. **Push**. The console should list `slug=hackamon` with `main.lua`, `data.lua` and `manifest.cfg`.
+6. **Push**. The console should list `slug=hackamon` with `main.lua`, `data.lua`, `fx.lua` and `manifest.cfg`.
 7. Click **Reboot** the first time, since the manifest sets a 96 KB Lua quota.
 8. Open Hackamon from the launcher.
 

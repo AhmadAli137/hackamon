@@ -10,12 +10,15 @@ wake_lock=1
 -- PKM02 (Squirtle) or PKM03 (Bulbasaur) to battle wild Pokemon. Win to add
 -- them to your team. If one of yours faints, you lose the whole team.
 -- UP/DOWN move the cursor. A selects / advances text. B goes back / runs.
--- Needs data.lua (Pokemon stats and sprites) in the same app folder.
+-- Needs data.lua (Pokemon stats and sprites) and fx.lua (light shows and
+-- sprite motion) in the same app folder.
 -- On first launch each sprite is rendered once into an image file (s1.bin
 -- enemy view, m1.bin mirrored player view) so a sprite costs one widget.
 
 local N,BG=20,0xf8f8f0
-local P
+local P,FX
+local TPAT={"fire","water","grass","elec"}
+local DMG={fire=1,water=1,grass=1,elec=1,burn=1,seed=1}
 local BIT={1,2,4,8}
 local SUP={3,1,2,2}
 local S,cur,act,owned,nfc,nxt=0,1,1,1,false,0
@@ -55,6 +58,9 @@ end
 
 local function sprite(id,mirror) return (mirror and "m" or "s")..id..".bin" end
 
+-- Swap an image and log free RAM, to catch decode failures when memory is short.
+local function show(w,name) w:set_src(name) badge.sys.log(name.." free "..badge.sys.stats().free_heap) end
+
 local function gc() if collectgarbage then collectgarbage("collect") else for _=1,20 do badge.sys.gc_step() end end end
 
 local function bar(b,hp,max)
@@ -79,14 +85,16 @@ end
 
 local function save() badge.store.set_int("act",act) badge.store.set_int("owned",owned) end
 
--- Each line carries an HP snapshot so bars move in step with the text. f = side to flash.
-local function push(m,f) q[#q+1]={m,P[me.id][1],me.hp,me.max,en.id and en.hp or 0,f} end
+-- Each line carries an HP snapshot so bars move in step with the text.
+-- f = side the effect lands on ("me"/"en"), p = light/motion pattern to play with it.
+local function push(m,f,p) q[#q+1]={m,P[me.id][1],me.hp,me.max,en.id and en.hp or 0,f,p} end
 
 local function advance()
   if qi<#q then
     qi=qi+1 local e=q[qi]
     MSG:set_text(e[1]) setbars(e[2],e[3],e[4],e[5])
-    if e[6] then fov=(e[6]=="me") and PO or EO fov:hidden(false) fend=badge.sys.ms()+220 end
+    if e[7] then FX.start(e[7],e[6]) end
+    if e[7] and DMG[e[7]] then fov=(e[6]=="me") and PO or EO fov:hidden(false) fend=badge.sys.ms()+220 end
     return
   end
   q,qi={},0
@@ -99,9 +107,9 @@ local function say(fn) after=fn S=4 MENU:set_text("") advance() end
 local function home()
   S=0 cur=1 en={} me=side(act)
   EN:set_text("") EH:set_text("") EB:hidden(true) EI:hidden(true)
-  PI:set_src(sprite(act,true)) setbars(P[act][1],me.hp,me.max,0)
+  show(PI,sprite(act,true)) setbars(P[act][1],me.hp,me.max,0)
   MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD"})
-  local c=P[act][6].a badge.led.set_all(c//65536,(c//256)%256,c%256) badge.led.show()
+  local c=P[act][6].a FX.idle(c//65536,(c//256)%256,c%256)
 end
 
 local function items()
@@ -127,24 +135,24 @@ local function use(u,t,mv,who)
     local dmg=math.max(1,math.floor((mv[2]+badge.sys.random(3))*e/2))
     if t.def>0 then dmg=math.max(1,math.floor(dmg/2)) end
     t.hp=math.max(0,t.hp-dmg)
-    push(u.name.." used\n"..mv[1].."!",who)
+    push(u.name.." used\n"..mv[1].."!",who,TPAT[a])
     if e==3 then push("It's super\neffective!") elseif e==1 then push("It's not very\neffective...") end
   else
     push(u.name.." used\n"..mv[1].."!")
   end
-  local fx=mv[3]
-  if fx=="burn" and t.burn==0 then t.burn=3 push(t.name.."\nwas burned!")
-  elseif fx=="def" then u.def=3 push(u.name.."\nwithdrew into\nits shell!")
-  elseif fx=="seed" and t.seed==0 then t.seed=3 push(t.name.."\nwas seeded!")
-  elseif fx=="par" and t.par==0 then t.par=3 push(t.name.."\nis paralyzed!") end
+  local fx,self=mv[3],(who=="me") and "en" or "me"
+  if fx=="burn" and t.burn==0 then t.burn=3 push(t.name.."\nwas burned!",who,"burn")
+  elseif fx=="def" then u.def=3 push(u.name.."\nwithdrew into\nits shell!",self,"def")
+  elseif fx=="seed" and t.seed==0 then t.seed=3 push(t.name.."\nwas seeded!",who,"grass")
+  elseif fx=="par" and t.par==0 then t.par=3 push(t.name.."\nis paralyzed!",who,"par") end
 end
 
 local function fx_tick(s,o,who)
   if s.hp==0 then return end
-  if s.burn>0 then s.hp=math.max(0,s.hp-2) s.burn=s.burn-1 push(s.name.."\nis hurt by\nits burn!",who) end
+  if s.burn>0 then s.hp=math.max(0,s.hp-2) s.burn=s.burn-1 push(s.name.."\nis hurt by\nits burn!",who,"burn") end
   if s.seed>0 and s.hp>0 then
     s.hp=math.max(0,s.hp-3) o.hp=math.min(o.max,o.hp+3) s.seed=s.seed-1
-    push("LEECH SEED saps\n"..s.name.."!",who)
+    push("LEECH SEED saps\n"..s.name.."!",who,"seed")
   end
   if s.def>0 then s.def=s.def-1 end
 end
@@ -168,13 +176,12 @@ local function finish_turn()
   local fn=bmenu
   if en.hp==0 then
     push(en.name.."\nfainted!")
-    if own(en.id) then push("You won!")
-    else owned=owned+BIT[en.id] push("You caught\n"..P[en.id][1].."!") save() end
-    fn=home badge.led.set_all(40,160,40) badge.led.show()
+    if own(en.id) then push("You won!",nil,"win")
+    else owned=owned+BIT[en.id] push("You caught\n"..P[en.id][1].."!",nil,"win") save() end
+    fn=home
   elseif me.hp==0 then
-    push(P[me.id][1].."\nfainted!") push("You lost all\nyour Pokemon...") push("Starting over\nwith PIKACHU.")
+    push(P[me.id][1].."\nfainted!",nil,"lose") push("You lost all\nyour Pokemon...") push("Starting over\nwith PIKACHU.")
     fn=function() owned=1 act=1 save() home() end
-    badge.led.set_all(160,30,30) badge.led.show()
   end
   say(fn)
 end
@@ -183,9 +190,8 @@ local function encounter(id)
   en=side(id,true) team={}
   for i=1,4 do if own(i) then team[i]=P[i][2] end end
   me=side(act)
-  EB:hidden(false) EI:set_src(sprite(id,false)) EI:hidden(false)
-  badge.led.set_all(200,60,0) badge.led.show()
-  push("Wild "..P[id][1].."\nappeared!") push("Go! "..P[me.id][1].."!")
+  EB:hidden(false) show(EI,sprite(id,false)) EI:hidden(false)
+  push("Wild "..P[id][1].."\nappeared!",nil,"appear") push("Go! "..P[me.id][1].."!")
   say(bmenu)
 end
 
@@ -198,7 +204,7 @@ local function scan(on)
 end
 
 function on_enter(root)
-  P=require("data")
+  P=require("data") FX=require("fx")
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1)
   if not own(act) then act=1 end
   -- Render sprite images once; bump the version number whenever data.lua sprites change.
@@ -219,7 +225,7 @@ function on_enter(root)
   EN=lbl(16,"top_left",8,6) EB=hbar("top_left",8,28) EH=lbl(14,"top_left",8,40)
   EI=badge.ui.image(root,sprite(1,false)) EI:align("top_right",-10,6)
   PI=badge.ui.image(root,sprite(act,true)) PI:align("bottom_left",14,-70)
-  EO=shade(60,"top_right",-10,6) PO=shade(40,"bottom_left",14,-70)
+  EO=shade(60,"top_right",-10,6) PO=shade(40,"bottom_left",14,-70) FX.init(EI,PI)
   PN=lbl(16,"bottom_right",-8,-112) PB=hbar("bottom_right",-8,-98) PH=lbl(16,"bottom_right",-8,-76)
   local dlg=badge.ui.box(root,288,60)
   dlg:style({bg_color=0xffffff,border_color=0x101010,border_width=2,radius=4,pad_all=0}) dlg:align("bottom_mid",0,-2)
@@ -230,6 +236,7 @@ end
 
 function on_tick()
   local now=badge.sys.ms()
+  FX.tick(now)
   if fov and now>=fend then fov:hidden(true) fov=nil end
   if S~=2 or not nfc or now<nxt then return end
   nxt=now+300
@@ -268,7 +275,7 @@ function on_button(b,k)
     elseif b==I.A then
       local id=o[cur]
       push("Come back,\n"..P[me.id][1].."!") team[me.id]=me.hp
-      me=side(id) me.hp=team[id] PI:set_src(sprite(id,true))
+      me=side(id) me.hp=team[id] show(PI,sprite(id,true))
       push("Go! "..P[id][1].."!") finish_turn()
     end
   elseif S==4 and b==I.A then advance()
