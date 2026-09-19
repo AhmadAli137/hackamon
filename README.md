@@ -46,8 +46,17 @@ phone app. Uppercase, no spaces.
 
 ## Installing
 
+The game is two files: `hackamon.lua` (manifest header plus game code) and `data.lua`
+(Pokemon stats and sprites). Splitting them keeps the Lua compiler's memory peak under
+the badge's limit.
+
 1. Open the badge IDE in Chrome or Edge.
 2. **Import app**, paste the whole of `hackamon.lua` including the header, **Replace editor files**.
-3. Remove `icon.bin` from the workspace.
-4. Badge off, USB data cable in, badge on. **Connect**, choose **USB JTAG/serial debug unit**.
-5. **Push**, then open Hackamon from the launcher.
+3. Click **+**, name the new file exactly `data.lua`, and paste the contents of `data.lua` into it.
+4. Remove `icon.bin` from the workspace, or keep it if you want the custom icon.
+5. Badge off, USB data cable in, badge on. **Connect**, choose **USB JTAG/serial debug unit**.
+6. **Push**. The console should list `slug=hackamon` with `main.lua`, `data.lua` and `manifest.cfg`.
+7. Click **Reboot** the first time, since the manifest sets a 96 KB Lua quota.
+8. Open Hackamon from the launcher.
+
+If the console says `cannot open .../data.lua`, the second file is missing or misnamed.
