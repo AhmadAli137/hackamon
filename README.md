@@ -8,21 +8,30 @@ One file, `hackamon.lua`, installed through the
 
 ## Pokemon
 
+You start with Pikachu. The other three live on NFC stickers.
+
 | Code | Pokemon | HP | Type | Attack | Effect move |
 | --- | --- | --- | --- | --- | --- |
+| starter | Pikachu | 35 | Electric | Quick Attack | Thunder Wave: paralyzes, enemy may lose its turn for 3 turns |
 | `PKM01` | Charmander | 39 | Fire | Scratch | Ember: damage plus a burn that hurts each turn |
 | `PKM02` | Squirtle | 44 | Water | Tackle | Withdraw: halves incoming damage for two turns |
 | `PKM03` | Bulbasaur | 45 | Grass | Tackle | Leech Seed: drains the enemy and heals you each turn |
 
-Fire beats Grass, Grass beats Water, Water beats Fire. Super effective hits do 1.5x.
+Fire beats Grass, Grass beats Water, Water beats Fire, Electric beats Water, Grass resists
+Electric. Super effective hits do 1.5x, resisted hits 0.5x.
 
 ## Playing
 
-- First launch: pick a starter.
-- Home: **SCAN** turns on the NFC reader. **SWITCH** cycles through the Pokemon you own.
+- Home: **SCAN** turns on the NFC reader. **SWITCH LEAD** picks which Pokemon goes first.
 - Hold a sticker to the back of the badge. A wild Pokemon appears.
-- Battle: UP/DOWN pick a move, A uses it, B runs. A advances the dialogue.
-- Beat a wild Pokemon to catch it. Your team is saved on the badge.
+- Battle: UP/DOWN pick a move, A uses it, B runs. A advances the dialogue, and HP bars
+  drop in step with the text. A hit darkens the target for a moment.
+- **SWITCH** appears in the battle menu once you own more than one Pokemon. Switching
+  uses your turn.
+- Every battle starts with your whole team at full HP.
+- Beat a wild Pokemon you don't own and it joins your team. Beat one you already own and
+  nothing changes, no duplicates.
+- If any of your Pokemon faints, you lose the whole team and start over with Pikachu.
 
 ## Screen layout
 
