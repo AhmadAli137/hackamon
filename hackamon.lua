@@ -153,7 +153,8 @@ function on_enter(root)
   R=root gc()
   -- Default GC waits for memory to double before finishing a cycle; with 49 KB live
   -- and 20 KB spare that never happens and garbage eats the heap. Collect continuously.
-  collectgarbage("setpause",100) collectgarbage("setstepmul",400)
+  if _VERSION=="Lua 5.5" then collectgarbage("param","pause",100) collectgarbage("param","stepmul",400)
+  else collectgarbage("incremental",100,400) end
   P=require("data") FX=require("fx") gc()
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1)
   if not own(act) then act=1 end
@@ -170,7 +171,7 @@ function on_enter(root)
   d:style({bg_color=0xffffff,border_color=0x101010,border_width=2,radius=4,pad_all=0}) d:align("bottom_mid",0,-2)
   MSG=badge.ui.label(d,"") MSG:style({text_font=14,text_color=0x101010}) MSG:set_size(146,54) MSG:set_pos(8,3)
   MENU=badge.ui.label(d,"") MENU:style({text_font=14,text_color=0x101010}) MENU:set_size(124,54) MENU:set_pos(158,3)
-  log("ui lua "..badge.sys.heap())
+  log(_VERSION.." ui lua "..badge.sys.heap())
   -- Render sprite images once, a few rows per tick. Bump the number when data.lua sprites change.
   if badge.store.get_int("imgs",0)~=3 then
     S=9 job=1 EB:hidden(true) PB:hidden(true) MSG:set_text("First launch:\npreparing\nsprites...")
