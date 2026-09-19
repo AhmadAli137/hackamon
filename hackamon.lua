@@ -32,31 +32,30 @@ local function px16(c)
   return string.char(v%256,v//256)
 end
 
--- Build an LVGL v9 RGB565 image of the sprite at the given scale.
-local function build(id,scale,mirror)
+-- Stream an LVGL v9 RGB565 image of the sprite to flash, five rows at a time,
+-- so no large string is ever held in RAM.
+local function build(id,scale,mirror,name)
   local pal,spr=P[id][6],P[id][7]
   local W=N*scale
-  local cache,rows={},{}
+  badge.fs.write(name,string.char(0x19,0x12,0,0,W%256,W//256,W%256,W//256,(W*2)%256,(W*2)//256,0,0))
+  local cache,chunk={},{}
   for y=1,N do
     local o,parts=(y-1)*N,{}
     for x=1,N do
       local xx=mirror and (N+1-x) or x
       local ch=string.sub(spr,o+xx,o+xx)
-      local s=cache[ch]
-      if not s then s=string.rep(px16(ch=="." and BG or pal[ch]),scale) cache[ch]=s end
-      parts[x]=s
+      local px=cache[ch]
+      if not px then px=string.rep(px16(ch=="." and BG or pal[ch]),scale) cache[ch]=px end
+      parts[x]=px
     end
-    rows[y]=string.rep(table.concat(parts),scale)
+    chunk[#chunk+1]=string.rep(table.concat(parts),scale)
+    if #chunk==5 then badge.fs.append(name,table.concat(chunk)) chunk={} end
   end
-  local hdr=string.char(0x19,0x12,0,0,W%256,W//256,W%256,W//256,(W*2)%256,(W*2)//256,0,0)
-  return hdr..table.concat(rows)
 end
 
-local function sprite(id,mirror)
-  local name=(mirror and "m" or "s")..id..".bin"
-  if not badge.fs.exists(name) then badge.fs.write(name,build(id,mirror and 2 or 3,mirror)) end
-  return name
-end
+local function sprite(id,mirror) return (mirror and "m" or "s")..id..".bin" end
+
+local function gc() if collectgarbage then collectgarbage("collect") else for _=1,20 do badge.sys.gc_step() end end end
 
 local function bar(b,hp,max)
   b:set_range(0,max) b:set_value(hp)
@@ -202,8 +201,11 @@ function on_enter(root)
   P=require("data")
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1)
   if not own(act) then act=1 end
-  for i=1,4 do sprite(i,false) sprite(i,true) end
-  if collectgarbage then collectgarbage("collect") end
+  -- Render sprite images once; bump the version number whenever data.lua sprites change.
+  if badge.store.get_int("imgs",0)~=2 then
+    for i=1,4 do build(i,3,false,sprite(i,false)) gc() build(i,2,true,sprite(i,true)) gc() end
+    badge.store.set_int("imgs",2)
+  end
   local function lbl(font,al,x,y)
     local l=badge.ui.label(root,"") l:style({text_font=font,text_color=0x101010}) l:align(al,x,y) return l
   end
