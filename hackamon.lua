@@ -3,7 +3,7 @@ slug=hackamon
 name=Hackamon
 icon=PKM
 api=2
-heap_kb=48
+heap_kb=96
 wake_lock=1
 ]==]
 -- HACKAMON. You start with PIKACHU. Scan NFC stickers PKM01 (Charmander),
@@ -12,96 +12,20 @@ wake_lock=1
 -- UP/DOWN move the cursor. A selects / advances text. B goes back / runs.
 
 local N,CELL=20,4
--- name, hp, type(1 fire 2 water 3 grass 4 electric), attack, effect move, palette, 20x20 sprite
+-- name, hp, type(1 fire 2 water 3 grass 4 electric), attack, effect move, palette, 20x20 sprite as one string
 local P={
  {"PIKACHU",35,4,{"QUICK ATTACK",7},{"THUNDER WAVE",0,"par"},
   {k=0x202020,a=0xf8d030,b=0xc89820,r=0xe04040,w=0xffffff},
-  {".kk..............kk.",
-   ".kkk............kkk.",
-   ".kkak..........kakk.",
-   "..kaak........kaak..",
-   "..kaaak......kaaak..",
-   "...kaakkkkkkkkaak...",
-   "...kaaaaaaaaaaaak...",
-   "..kaaaaaaaaaaaaaak..",
-   "..kaakwaaaaaakwaak..",
-   "..kaakkaaaaaakkaak..",
-   "..kaaaaaakkaaaaaak..",
-   ".krraaaakaaaakaaarrk",
-   ".krraaaaakaakaaaarrk",
-   "..kaaaaaaakkaaaaakkk",
-   "..kaaaaaaaaaaaaakaak",
-   ".kaaakaaaaaaaakaaaak",
-   ".kaaaakaaaaaakaaaak.",
-   ".kbbaaaaaaaaaaaabbk.",
-   "..kkbaaakaakaaabkk..",
-   "....kkkkkkkkkkkkk..."}},
+  ".kk..............kk..kkk............kkk..kkak..........kakk...kaak........kaak....kaaak......kaaak.....kaakkkkkkkkaak......kaaaaaaaaaaaak.....kaaaaaaaaaaaaaak....kaakwaaaaaakwaak....kaakkaaaaaakkaak....kaaaaaakkaaaaaak...krraaaakaaaakaaarrk.krraaaaakaakaaaarrk..kaaaaaaakkaaaaakkk..kaaaaaaaaaaaaakaak.kaaakaaaaaaaakaaaak.kaaaakaaaaaakaaaak..kbbaaaaaaaaaaaabbk...kkbaaakaakaaabkk......kkkkkkkkkkkkk..."},
  {"CHARMANDER",39,1,{"SCRATCH",7},{"EMBER",4,"burn"},
   {k=0x202020,a=0xf08838,b=0xc05820,c=0xf8e0a0,f=0xf8d838,g=0xf05028,w=0xffffff},
-  {"......kkkkk.........",
-   ".....kaaaaak........",
-   "....kaaaaaaak.......",
-   "....kawkaawkk.......",
-   "....kakkaakkk.......",
-   "....kaaaaaaak.......",
-   ".....kaakaak........",
-   "......kkkkk.........",
-   ".....kaaaaak..kk....",
-   "....kaakcckaak.kk...",
-   "...kaaakccckaak.kf..",
-   "...kaaakccckaak.kgk.",
-   "...kaaakccckaaakkfgk",
-   "...kaakkccckbaaakffk",
-   "....kakccckbbaaaakk.",
-   "....kaakkkbbaaaaak..",
-   "...kbaaaaaabkkkkk...",
-   "..kbbkaaaaakbbk.....",
-   "..kbkkkaaakkkbk.....",
-   "..kkk.kkkkk..kk....."}},
+  "......kkkkk..............kaaaaak............kaaaaaaak...........kawkaawkk...........kakkaakkk...........kaaaaaaak............kaakaak..............kkkkk..............kaaaaak..kk........kaakcckaak.kk......kaaakccckaak.kf.....kaaakccckaak.kgk....kaaakccckaaakkfgk...kaakkccckbaaakffk....kakccckbbaaaakk.....kaakkkbbaaaaak.....kbaaaaaabkkkkk.....kbbkaaaaakbbk.......kbkkkaaakkkbk.......kkk.kkkkk..kk....."},
  {"SQUIRTLE",44,2,{"TACKLE",7},{"WITHDRAW",0,"def"},
   {k=0x202020,a=0x70b0e8,b=0x3878b8,c=0xd09848,d=0x886030,e=0xf0d8a0,w=0xffffff},
-  {".....kkkkkk.........",
-   "....kaaaaaak........",
-   "...kaaaaaaaak.......",
-   "...kaawkaaawk.......",
-   "...kaakkaaakk.......",
-   "...kaaaaaaaak.......",
-   "....kaakaaak........",
-   "....kkaaaaakkkk.....",
-   "...kbbkkkkkcccdk....",
-   "..kbbbkeeekccccdk...",
-   "..kbbbkeeeekccccdk..",
-   "..kbbbkeeeekcccdck..",
-   "...kbkkeeeekccddk...",
-   "....kkeeeeekdddk....",
-   "...kbbkeeekkkkk.....",
-   "..kbbbkkkkkbbbk.....",
-   "..kbbbk...kbbbk.....",
-   "..kbbbk...kbbbk.....",
-   "...kkk.....kkk......",
-   "...................."}},
+  ".....kkkkkk.............kaaaaaak...........kaaaaaaaak..........kaawkaaawk..........kaakkaaakk..........kaaaaaaaak...........kaakaaak............kkaaaaakkkk........kbbkkkkkcccdk......kbbbkeeekccccdk.....kbbbkeeeekccccdk....kbbbkeeeekcccdck.....kbkkeeeekccddk.......kkeeeeekdddk.......kbbkeeekkkkk.......kbbbkkkkkbbbk.......kbbbk...kbbbk.......kbbbk...kbbbk........kkk.....kkk.........................."},
  {"BULBASAUR",45,3,{"TACKLE",7},{"LEECH SEED",0,"seed"},
   {k=0x202020,a=0x60c8a8,b=0x309878,c=0x80d860,d=0x40a040,r=0xd03030,w=0xffffff},
-  {"..........kkkkkk....",
-   "........kkcccccdk...",
-   ".......kcccddcccdk..",
-   "......kccdccccdcck..",
-   ".....kkcdccccccddk..",
-   "....kaakkcddccddk...",
-   "...kaaaaakkkkkkk....",
-   "..kaaaaaaaaaaaak....",
-   ".kaarkaaaaaakraak...",
-   ".kaakkaaaaaakkaak...",
-   ".kaaaaaaaaaaaaaaak..",
-   ".kakaaaakbbaaakaak..",
-   ".kaakkkkaaaaaaaaak..",
-   ".kbaaaaaabaaaabaak..",
-   "..kaaaakkaaaaakbbk..",
-   "..kaaaak.kaaaak.kk..",
-   "..kbbbk..kbbbbk.....",
-   "..kbbbk..kbbbbk.....",
-   "...kkk....kkkk......",
-   "...................."}},
+  "..........kkkkkk............kkcccccdk..........kcccddcccdk........kccdccccdcck.......kkcdccccccddk......kaakkcddccddk......kaaaaakkkkkkk......kaaaaaaaaaaaak.....kaarkaaaaaakraak....kaakkaaaaaakkaak....kaaaaaaaaaaaaaaak...kakaaaakbbaaakaak...kaakkkkaaaaaaaaak...kbaaaaaabaaaabaak....kaaaakkaaaaakbbk....kaaaak.kaaaak.kk....kbbbk..kbbbbk.......kbbbk..kbbbbk........kkk....kkkk.........................."},
 }
 local BIT={1,2,4,8}
 local SUP={3,1,2,2}   -- type index -> the type it is strong against
@@ -122,13 +46,13 @@ local function own(id) return (owned//BIT[id])%2==1 end
 local function blit(pool,id,mirror)
   local pal,spr,n=P[id][6],P[id][7],0
   for y=1,N do
-    local row,x=spr[y],1
+    local o,x=(y-1)*N,1
     while x<=N do
-      local ch=string.sub(row,x,x)
+      local ch=string.sub(spr,o+x,o+x)
       if ch=="." then x=x+1
       else
         local x2=x
-        while x2<N and string.sub(row,x2+1,x2+1)==ch do x2=x2+1 end
+        while x2<N and string.sub(spr,o+x2+1,o+x2+1)==ch do x2=x2+1 end
         n=n+1
         local b=pool[n]
         if not b then b=badge.ui.box(pool.par,CELL,CELL) b:style({border_width=0,radius=0,pad_all=0}) pool[n]=b end
