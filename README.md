@@ -50,10 +50,27 @@ If the console says `main.lua is not a regular file`, the code file in the works
 not named `main.lua`. If it says `manifest.cfg is missing a slug= line`, the header block
 was pasted into `main.lua` instead of going through Import app.
 
-## Setting up stickers
+## Sticker codes
 
-See [docs/stickers.md](docs/stickers.md) for the creature codes and how to write them
-with a phone.
+Write one of these as an NDEF **Text** record onto an NTAG215 sticker with the NFC Tools
+phone app. Codes are uppercase with no spaces.
+
+| Code | Hackemon | Type | Base HP | Base ATK | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `HKM01` | Soldrat | HW | 22 | 6 | Starter option |
+| `HKM02` | Neuron | AI | 20 | 7 | Starter option |
+| `HKM03` | Crawly | WEB | 18 | 8 | Starter option |
+| `HKM04` | Pixie | DSGN | 17 | 8 | |
+| `HKM05` | Lockjaw | SEC | 26 | 5 | Tanky |
+| `HKM06` | Kernel | SYS | 24 | 6 | |
+| `HKM07` | Voltra | HW | 19 | 9 | Glass cannon |
+| `HKM08` | Gradient | AI | 21 | 7 | |
+| `HKM09` | Cachemander | SYS | 23 | 8 | Rare, hide it well |
+| `HKM10` | Rootkat | SEC | 25 | 9 | Rare, hide it well |
+
+Append `L` and a number for a stronger wild, for example `HKM09L5` for a level 5
+Cachemander. Each level adds 3 HP and 1 ATK. A caught Hackemon keeps the level it was
+caught at. Full writing and placement guide: [docs/stickers.md](docs/stickers.md).
 
 ## Hardware findings
 
