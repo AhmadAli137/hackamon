@@ -1,5 +1,5 @@
 -- Sprite image renderer. Loaded only when the image files need (re)building.
--- Each call renders one quarter (five rows) of one image, so it can be spread across
+-- Each call renders two rows of one image (part 1..10), so it can be spread across
 -- ticks without hitting a callback deadline. Output is an LVGL v9 RGB565 image at
 -- 2.5x: columns and rows alternate 3 and 2 pixels, so a 20x20 sprite becomes 50x50.
 local N,BG=20,0xf8f8f0
@@ -9,11 +9,11 @@ local function px16(c)
   return string.char(v%256,v//256)
 end
 
--- SP = sprites.lua table, id = Pokemon index, mirror = face right, part = 1..4
+-- SP = sprites.lua table, id = Pokemon index, mirror = face right, part = 1..10
 return function(SP,id,mirror,name,part)
   local pal,spr=SP[id][1],SP[id][2]
   local cache,rows={},{}
-  for y=(part-1)*5+1,part*5 do
+  for y=(part-1)*2+1,part*2 do
     local o,parts=(y-1)*N,{}
     for x=1,N do
       local xx=mirror and (N+1-x) or x
