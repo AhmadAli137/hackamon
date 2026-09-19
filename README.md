@@ -23,12 +23,14 @@ Electric. Super effective hits do 1.5x, resisted hits 0.5x.
 ## Playing
 
 - Home: **SCAN** turns on the NFC reader. **SWITCH LEAD** picks which Pokemon goes first.
+  **HACKADEX** lists all four Pokemon: caught ones are starred, seen ones show their sprite
+  and stats, unseen ones show as ???.
 - Hold a sticker to the back of the badge. A wild Pokemon appears.
 - Battle: UP/DOWN pick a move, A uses it, B runs. A advances the dialogue, and HP bars
   drop in step with the text. The attacker lunges, the target shakes and darkens, and
-  the LEDs play a pattern for the move: orange flicker for Fire, a blue wave for Water,
-  a green chase for Grass, a yellow strobe for Electric. Burns pulse orange on the
-  burned side, Leech Seed pulses green between the two sides, Withdraw breathes blue.
+  the LEDs play in the move's colour. Attack moves are quick: a triple flash and an instant
+  hit. Special moves are long: three laps around the LED ring, then all six hold for the
+  impact. Flames, bubbles, leaves or sparks burst over the Pokemon that gets hit.
 - **SWITCH** appears in the battle menu once you own more than one Pokemon. Switching
   uses your turn.
 - Every battle starts with your whole team at full HP.

@@ -13,12 +13,14 @@ wake_lock=1
 -- 50x50 image files on first launch (s1..s4 enemy view, m1..m4 mirrored player view).
 local P,FX
 local BIT,SUP,TP={1,2,4,8},{3,1,2,2},{"fire","water","grass","elec"}
-local S,cur,act,owned,nfc,nxt,job=0,1,1,1,false,0,0
+local TN={"FIRE","WATER","GRASS","ELECTRIC"}
+local S,cur,act,owned,seen,nfc,nxt,job=0,1,1,1,1,false,0,0
 local me,en,team={},{},{}
 local q,qi,after={},0,nil
 local R,EN,EB,EH,EI,EO,PN,PB,PH,PI,PO,MSG,MENU
 
 local function own(i) return (owned//BIT[i])%2==1 end
+local function met(i) return (seen//BIT[i])%2==1 end
 local function gc() collectgarbage("collect") end
 local function spr(i,m) return (m and "m" or "s")..i..".bin" end
 local function log(t) badge.sys.log(t.." free "..badge.sys.stats().free_heap) end
@@ -39,7 +41,7 @@ end
 local function side(i,e)
   return {id=i,hp=P[i][2],max=P[i][2],burn=0,seed=0,def=0,par=0,name=(e and "Enemy " or "")..P[i][1]}
 end
-local function save() badge.store.set_int("act",act) badge.store.set_int("owned",owned) end
+local function save() badge.store.set_int("act",act) badge.store.set_int("owned",owned) badge.store.set_int("seen",seen) end
 
 -- Dialogue queue. Each line snapshots HP so bars move with the text; f = side hit, p = fx pattern.
 local function push(m,f,p) q[#q+1]={m,P[me.id][1],me.hp,me.max,en.id and en.hp or 0,f,p} end
@@ -58,8 +60,19 @@ local function home()
   S=0 cur=1 en={} me=side(act) gc()
   EN:set_text("") EH:set_text("") EB:hidden(true) EI:hidden(true)
   PI:set_src(spr(act,true)) bars(P[act][1],me.hp,me.max,0)
-  MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD"})
-  FX.idle(P[act][6].a) log("home")
+  MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD","HACKADEX"})
+  FX.idle(P[act][3]) log("home")
+end
+-- Hackadex: reuses the enemy panel and image widget, so it costs no extra widgets.
+local function dex()
+  S=6
+  local i,s=cur,met(cur)
+  EI:hidden(not s) if s then EI:set_src(spr(i,false)) end
+  EN:set_text(s and P[i][1] or "???") EH:set_text(s and ("HP "..P[i][2].."  "..TN[P[i][3]]) or "")
+  MSG:set_text("HACKADEX "..i.."/4\n"..(own(i) and "Caught!" or (s and "Seen" or "Not found yet")))
+  local t={}
+  for j=1,4 do t[j]=(met(j) and P[j][1] or "???")..(own(j) and " *" or "") end
+  menu(t)
 end
 local function items()
   local t={P[me.id][4][1],P[me.id][5][1]}
@@ -122,12 +135,13 @@ local function turn()
     f=home
   elseif me.hp==0 then
     push(P[me.id][1].."\nfainted!",nil,"lose") push("You lost all\nyour Pokemon...") push("Starting over\nwith PIKACHU.")
-    f=function() owned=1 act=1 save() home() end
+    f=function() owned=1 act=1 seen=1 save() home() end
   end
   say(f)
 end
 local function encounter(i)
   en=side(i,true) team={}
+  if not met(i) then seen=seen+BIT[i] save() end
   for j=1,4 do if own(j) then team[j]=P[j][2] end end
   me=side(act)
   EB:hidden(false) EI:set_src(spr(i,false)) EI:hidden(false) log("wild "..i)
@@ -146,7 +160,7 @@ local function start()
   EI=badge.ui.image(R,spr(1,false)) EI:align("top_right",-10,6)
   PI=badge.ui.image(R,spr(act,true)) PI:align("bottom_left",14,-70)
   EO=FX.shade(R,"top_right",-10,6) PO=FX.shade(R,"bottom_left",14,-70)
-  FX.init(EI,PI,EO,PO) home()
+  FX.init(R,EI,PI,EO,PO) home()
 end
 
 function on_enter(root)
@@ -156,7 +170,7 @@ function on_enter(root)
   if _VERSION=="Lua 5.5" then collectgarbage("param","pause",100) collectgarbage("param","stepmul",400)
   else collectgarbage("incremental",100,400) end
   P=require("data") FX=require("fx") gc()
-  act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1)
+  act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1) seen=badge.store.get_int("seen",1)
   if not own(act) then act=1 end
   local function lbl(f,al,x,y)
     local l=badge.ui.label(root,"") l:style({text_font=f,text_color=0x101010}) l:align(al,x,y) return l
@@ -203,9 +217,13 @@ function on_button(b,k)
   local I=badge.input.BUTTON
   local up,dn,A,B=b==I.UP,b==I.DOWN,b==I.A,b==I.B
   if S==0 then
-    if up or dn then cur=3-cur menu({"SCAN","SWITCH LEAD"})
+    if up then cur=(cur+1)%3+1 menu({"SCAN","SWITCH LEAD","HACKADEX"})
+    elseif dn then cur=cur%3+1 menu({"SCAN","SWITCH LEAD","HACKADEX"})
     elseif A and cur==1 then scan(true)
+    elseif A and cur==3 then cur=act dex()
     elseif A then for _=1,4 do act=act%4+1 if own(act) then break end end save() home() end
+  elseif S==6 then
+    if up then cur=(cur+2)%4+1 dex() elseif dn then cur=cur%4+1 dex() elseif B or A then home() end
   elseif S==2 then
     if B then scan(false) home() end
   elseif S==3 then
