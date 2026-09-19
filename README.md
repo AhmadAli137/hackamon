@@ -30,16 +30,10 @@ extra hardware. Apps are installed from the browser at
 | DOWN | | Catch |
 | HOME | Exit | Exit |
 
-## Other apps
+## Tools
 
-| App | File | What it is |
-| --- | --- | --- |
-| Tag Scanner | `apps/scanner/scanner.lua` | Reads any NFC tag's UID and text. Use it to check stickers. |
-| Snake | `apps/snake/snake.lua` | Classic snake with a saved best score. |
-| Color Buttons | `apps/colors/colors.lua` | Each button paints the screen and LEDs. Good first install. |
-| RPS vs Badge | `apps/rps/rps_solo.lua` | Rock paper scissors against the badge. |
-| Rock Paper Scissors | `apps/rps/rps.lua` | Two badges over the radio. Untested, see hardware notes. |
-| Pocket Duel | `experiments/pocket_duel/pocket_duel.lua` | Two-badge battle prototype. Untested, see hardware notes. |
+`tools/scanner.lua` is a plain NFC tag scanner. Install it alongside the game to check
+that a sticker was written correctly before hiding it.
 
 ## Installing an app
 

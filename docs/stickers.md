@@ -9,7 +9,7 @@ reader handles any ISO 14443A tag, and NTAG213 or NTAG215 stickers are the cheap
 2. Choose **Write**, then **Add a record**, then **Text**.
 3. Type the code, for example `HKM07`.
 4. Tap **Write** and hold the phone on the sticker until it confirms.
-5. Check it with the badge's Tag Scanner app before hiding it.
+5. Check it with the Tag Scanner app in `tools/scanner.lua` before hiding it.
 
 ## Codes
 
