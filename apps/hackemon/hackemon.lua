@@ -48,14 +48,24 @@ local function hpside(idx,h,m)
 end
 local function ledhp() badge.led.clear() hpside(LS,mhp,mmax) hpside(RS,whp,wmax) badge.led.show() end
 
-local function draw(id)
-  local c=C[id]
+local function draw(id,sil)
+  local c=C[id] local sp=c[7]
+  local function on(i) return i>=1 and i<=64 and string.sub(sp,i,i)~="." end
   for i=1,64 do
-    local ch=string.sub(c[7],i,i)
+    local ch=string.sub(sp,i,i)
     if ch=="." then px[i]:hidden(true)
     else
+      local col
+      if sil then
+        -- Silhouette: lighter contour on cells touching empty space, dark fill inside.
+        local x=(i-1)%8
+        local edge=not on(i-8) or not on(i+8) or x==0 or x==7 or not on(i-1) or not on(i+1)
+        col=edge and 0x707088 or 0x1c1c26
+      else
+        col=(ch=="a" and c[5]) or (ch=="b" and c[6]) or 0xffffff
+      end
       px[i]:hidden(false)
-      px[i]:style({bg_color=(ch=="a" and c[5]) or (ch=="b" and c[6]) or 0xffffff})
+      px[i]:style({bg_color=col})
     end
   end
   SP:hidden(false)
@@ -107,7 +117,7 @@ local function show(s)
       A:set_text("#"..sel.."  "..c[1].."\nType "..TN[c[2]].."\nHP "..c[3].."  ATK "..c[4].."\n\n"..(bit(caught,sel) and ("CAUGHT  Lv"..lv[sel]) or "Seen, not caught"))
       draw(sel) leds(c[5])
     else
-      A:set_text("#"..sel.."  ???\n\nNot yet found.\nKeep exploring!") leds(0x202030)
+      A:set_text("#"..sel.."  ???\n\nWho's that\nHackemon?\n\nNot yet found.") draw(sel,true) leds(0x202030)
     end
     L:set_text("UP/DOWN browse   B back")
   end
