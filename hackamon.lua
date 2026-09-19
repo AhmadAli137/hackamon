@@ -11,49 +11,51 @@ wake_lock=1
 -- them to your team. If one of yours faints, you lose the whole team.
 -- UP/DOWN move the cursor. A selects / advances text. B goes back / runs.
 -- Needs data.lua (Pokemon stats and sprites) in the same app folder.
+-- On first launch each sprite is rendered once into an image file (s1.bin
+-- enemy view, m1.bin mirrored player view) so a sprite costs one widget.
 
-local N,CELL=20,4
+local N,BG=20,0xf8f8f0
 local P
 local BIT={1,2,4,8}
 local SUP={3,1,2,2}
 local S,cur,act,owned,nfc,nxt=0,1,1,1,false,0
 local me,en,team={},{},{}
 local q,qi,after={},0,nil
-local fpool,fend=nil,0
-local EN,EB,EH,PN,PB,PH,MSG,MENU
-local epool,ppool={c={}},{c={}}
+local fov,fend=nil,0
+local EN,EB,EH,EI,EO,PN,PB,PH,PI,PO,MSG,MENU
 
 local function own(id) return (owned//BIT[id])%2==1 end
 
-local function blit(pool,id,mirror)
-  local pal,spr,n=P[id][6],P[id][7],0
-  for y=1,N do
-    local o,x=(y-1)*N,1
-    while x<=N do
-      local ch=string.sub(spr,o+x,o+x)
-      if ch=="." then x=x+1
-      else
-        local x2=x
-        while x2<N and string.sub(spr,o+x2+1,o+x2+1)==ch do x2=x2+1 end
-        n=n+1
-        local b=pool[n]
-        if not b then b=badge.ui.box(pool.par,CELL,CELL) b:style({border_width=0,radius=0,pad_all=0}) pool[n]=b end
-        b:set_size((x2-x+1)*CELL,CELL) b:set_pos((mirror and (N-x2) or (x-1))*CELL,(y-1)*CELL)
-        pool.c[n]=pal[ch] b:style({bg_color=pal[ch]}) b:hidden(false)
-        x=x2+1
-      end
-    end
-  end
-  for i=n+1,#pool do pool[i]:hidden(true) end
-  pool.n=n
+-- 0xRRGGBB -> little-endian RGB565 pair
+local function px16(c)
+  local v=(c//65536//8)*2048+((c//256)%256//4)*32+(c%256//8)
+  return string.char(v%256,v//256)
 end
 
-local function tint(pool,dark)
-  for i=1,pool.n or 0 do
-    local c=pool.c[i]
-    if dark then c=(c//65536//3)*65536+((c//256)%256//3)*256+(c%256)//3 end
-    pool[i]:style({bg_color=c})
+-- Build an LVGL v9 RGB565 image of the sprite at the given scale.
+local function build(id,scale,mirror)
+  local pal,spr=P[id][6],P[id][7]
+  local W=N*scale
+  local cache,rows={},{}
+  for y=1,N do
+    local o,parts=(y-1)*N,{}
+    for x=1,N do
+      local xx=mirror and (N+1-x) or x
+      local ch=string.sub(spr,o+xx,o+xx)
+      local s=cache[ch]
+      if not s then s=string.rep(px16(ch=="." and BG or pal[ch]),scale) cache[ch]=s end
+      parts[x]=s
+    end
+    rows[y]=string.rep(table.concat(parts),scale)
   end
+  local hdr=string.char(0x19,0x12,0,0,W%256,W//256,W%256,W//256,(W*2)%256,(W*2)//256,0,0)
+  return hdr..table.concat(rows)
+end
+
+local function sprite(id,mirror)
+  local name=(mirror and "m" or "s")..id..".bin"
+  if not badge.fs.exists(name) then badge.fs.write(name,build(id,mirror and 2 or 3,mirror)) end
+  return name
 end
 
 local function bar(b,hp,max)
@@ -78,14 +80,14 @@ end
 
 local function save() badge.store.set_int("act",act) badge.store.set_int("owned",owned) end
 
--- Each line carries an HP snapshot so bars move in step with the text. f = sprite to flash.
+-- Each line carries an HP snapshot so bars move in step with the text. f = side to flash.
 local function push(m,f) q[#q+1]={m,P[me.id][1],me.hp,me.max,en.id and en.hp or 0,f} end
 
 local function advance()
   if qi<#q then
     qi=qi+1 local e=q[qi]
     MSG:set_text(e[1]) setbars(e[2],e[3],e[4],e[5])
-    if e[6] then fpool=(e[6]=="me") and ppool or epool tint(fpool,true) fend=badge.sys.ms()+220 end
+    if e[6] then fov=(e[6]=="me") and PO or EO fov:hidden(false) fend=badge.sys.ms()+220 end
     return
   end
   q,qi={},0
@@ -97,9 +99,8 @@ local function say(fn) after=fn S=4 MENU:set_text("") advance() end
 
 local function home()
   S=0 cur=1 en={} me=side(act)
-  EN:set_text("") EH:set_text("") EB:hidden(true)
-  for i=1,epool.n or 0 do epool[i]:hidden(true) end
-  blit(ppool,act,true) setbars(P[act][1],me.hp,me.max,0)
+  EN:set_text("") EH:set_text("") EB:hidden(true) EI:hidden(true)
+  PI:set_src(sprite(act,true)) setbars(P[act][1],me.hp,me.max,0)
   MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD"})
   local c=P[act][6].a badge.led.set_all(c//65536,(c//256)%256,c%256) badge.led.show()
 end
@@ -183,7 +184,7 @@ local function encounter(id)
   en=side(id,true) team={}
   for i=1,4 do if own(i) then team[i]=P[i][2] end end
   me=side(act)
-  EB:hidden(false) blit(epool,id,false)
+  EB:hidden(false) EI:set_src(sprite(id,false)) EI:hidden(false)
   badge.led.set_all(200,60,0) badge.led.show()
   push("Wild "..P[id][1].."\nappeared!") push("Go! "..P[me.id][1].."!")
   say(bmenu)
@@ -201,18 +202,22 @@ function on_enter(root)
   P=require("data")
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1)
   if not own(act) then act=1 end
+  for i=1,4 do sprite(i,false) sprite(i,true) end
+  if collectgarbage then collectgarbage("collect") end
   local function lbl(font,al,x,y)
     local l=badge.ui.label(root,"") l:style({text_font=font,text_color=0x101010}) l:align(al,x,y) return l
   end
   local function hbar(al,x,y)
     local b=badge.ui.bar(root,0,100,100) b:set_size(110,8) b:align(al,x,y) b:style({bg_color=0xc8c8c0},"main") return b
   end
-  local function spot(al,x,y)
-    local b=badge.ui.box(root,N*CELL,N*CELL) b:style({bg_opa=0,border_width=0,pad_all=0}) b:align(al,x,y) return b
+  local function shade(w,al,x,y)
+    local b=badge.ui.box(root,w,w) b:style({bg_color=0x000000,bg_opa=150,border_width=0,radius=0}) b:align(al,x,y) b:hidden(true) return b
   end
-  local bg=badge.ui.box(root,320,240) bg:style({bg_color=0xf8f8f0,border_width=0,radius=0}) bg:align("center",0,0)
+  local bg=badge.ui.box(root,320,240) bg:style({bg_color=BG,border_width=0,radius=0}) bg:align("center",0,0)
   EN=lbl(16,"top_left",8,6) EB=hbar("top_left",8,28) EH=lbl(14,"top_left",8,40)
-  epool.par=spot("top_right",-8,4) ppool.par=spot("bottom_left",8,-66)
+  EI=badge.ui.image(root,sprite(1,false)) EI:align("top_right",-10,6)
+  PI=badge.ui.image(root,sprite(act,true)) PI:align("bottom_left",14,-70)
+  EO=shade(60,"top_right",-10,6) PO=shade(40,"bottom_left",14,-70)
   PN=lbl(16,"bottom_right",-8,-112) PB=hbar("bottom_right",-8,-98) PH=lbl(16,"bottom_right",-8,-76)
   local dlg=badge.ui.box(root,288,60)
   dlg:style({bg_color=0xffffff,border_color=0x101010,border_width=2,radius=4,pad_all=0}) dlg:align("bottom_mid",0,-2)
@@ -223,7 +228,7 @@ end
 
 function on_tick()
   local now=badge.sys.ms()
-  if fpool and now>=fend then tint(fpool,false) fpool=nil end
+  if fov and now>=fend then fov:hidden(true) fov=nil end
   if S~=2 or not nfc or now<nxt then return end
   nxt=now+300
   if not badge.nfc.card() then return end
@@ -261,7 +266,7 @@ function on_button(b,k)
     elseif b==I.A then
       local id=o[cur]
       push("Come back,\n"..P[me.id][1].."!") team[me.id]=me.hp
-      me=side(id) me.hp=team[id] blit(ppool,id,true)
+      me=side(id) me.hp=team[id] PI:set_src(sprite(id,true))
       push("Go! "..P[id][1].."!") finish_turn()
     end
   elseif S==4 and b==I.A then advance()
