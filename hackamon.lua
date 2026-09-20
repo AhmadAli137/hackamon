@@ -15,7 +15,7 @@ home_button=1
 -- The badge only has RAM for the code a screen needs, so one-shot code is loaded, used
 -- and dropped: ui.lua (widgets), title.lua (parade + wipe), gen.lua (first-launch sprite
 -- render). Only fx.lua (battle lights, motion) stays resident beside this file.
-local FX
+local FX,scan
 -- name, hp, type (1 fire 2 water 3 grass 4 electric), attack {name,power}, effect {name,power,effect}
 local P={
  {"PIKACHU",35,4,{"QUICK ATTACK",7},{"THUNDER WAVE",0,"par"}},
@@ -161,7 +161,13 @@ local function encounter(i)
   push("Wild "..P[i][1].."\nappeared!",nil,"appear") push("Go! "..P[me.id][1].."!")
   say(bmenu)
 end
-local function scan(on)
+-- Leaving fragments the badge heap until a reboot, so say so before exiting.
+local function bye()
+  S=10 nxt=badge.sys.ms()+3000 FX.mode(nil) if nfc then scan(false) end
+  MENU:set_text("") MSG:set_size(272,58)
+  MSG:set_text("Team saved. Power the\nbadge off and on before\nplaying again.")
+end
+scan=function(on)
   if on then
     nfc=badge.nfc.enable()
     if nfc then badge.nfc.clear() S=2 MSG:set_text("Scanning...\nHold a sticker\nto the badge.") MENU:set_text("B stop")
@@ -196,6 +202,7 @@ end
 
 function on_tick()
   local now=badge.sys.ms()
+  if S==10 then if now>=nxt then badge.app.exit() end return end
   if S==9 then
     if GEN() then GEN=nil SPR=nil gc() badge.store.set_int("imgs",7) log("renderer dropped") start() end
     return
@@ -216,7 +223,7 @@ function on_button(b,k)
   local I=badge.input.BUTTON
   -- HOME is delivered to us (home_button=1); its Released is the reliable edge.
   if b==I.HOME then
-    if k==badge.input.KIND.RELEASED and S~=8 and S~=9 then
+    if k==badge.input.KIND.RELEASED and S~=8 and S~=9 and S~=10 then
       if S==7 then badge.app.exit() else scan(false) home() end
     end
     return
@@ -229,7 +236,7 @@ function on_button(b,k)
     if up then cur=(cur+1)%3+1 menu(hm)
     elseif dn then cur=cur%3+1 menu(hm)
     elseif A and cur==1 then scan(true)
-    elseif A and cur==3 then badge.app.exit()
+    elseif A and cur==3 then bye()
     elseif A then for _=1,4 do act=act%4+1 if own(act) then break end end save() home() end
   elseif S==2 then
     if B then scan(false) home() end

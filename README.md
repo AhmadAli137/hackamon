@@ -25,8 +25,10 @@ Electric. Super effective hits do 1.5x, resisted hits 0.5x.
 - Launch: a title screen where the four Pokemon parade across a night sky, each posing
   centre stage with its element's effects and LED colour. A wipes to the home screen.
 - HOME returns to the home screen from anywhere. **EXIT** on the home menu leaves the
-  game. Leaving fragments the badge's memory until the next reboot, so play stays inside
-  the app rather than bouncing through the launcher.
+  game after a short reminder to power the badge off and on before the next play.
+  Leaving fragments the badge's memory until a reboot, and a launch on a fragmented
+  badge fails with a Lua memory error, so play stays inside the app rather than
+  bouncing through the launcher.
 - Home: **SCAN** turns on the NFC reader. **SWITCH LEAD** picks which Pokemon goes first.
 - Hold a sticker to the back of the badge. A wild Pokemon appears.
 - Battle: UP/DOWN pick a move, A uses it, B runs. A advances the dialogue, and HP bars
