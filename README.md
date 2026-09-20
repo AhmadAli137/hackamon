@@ -64,15 +64,18 @@ effects, encounters) and `fx.lua` (lights, motion, particles) load the first tim
 player picks SCAN, before the NFC reader is switched on. `gen.lua` holds the sprite art
 and renders the image files on first launch before any widgets exist, then is dropped.
 
-1. Open the badge IDE in Chrome or Edge.
-2. **Import app**, paste the whole of `hackamon.lua` including the header, **Replace editor files**.
-3. Click **+** and add each of `battle.lua`, `fx.lua`, `screens.lua` and `gen.lua`, named
-   exactly, pasting the repo file into each.
-4. **Choose image** to add the Pokeball icon if you want it.
-5. Badge off, USB data cable in, badge on. **Connect**, choose **USB JTAG/serial debug unit**.
-6. **Push**. The console should list `slug=hackamon` with all the files.
-7. Click **Reboot** the first time, since the manifest sets a 96 KB Lua quota.
-8. Open Hackamon from the launcher.
+1. Run `python tools/build.py`. It writes comment-stripped copies of the five Lua files
+   to `dist/` and checks the Share bundle stays under 16 files and 48 KiB. Comments cost
+   nothing in RAM but count toward that cap. Paste from `dist/`, never from the repo root.
+2. Open the badge IDE in Chrome or Edge.
+3. **Import app**, paste the whole of `dist/hackamon.lua` including the header, **Replace editor files**.
+4. Click **+** and add each of `battle.lua`, `fx.lua`, `screens.lua` and `gen.lua`, named
+   exactly, pasting the `dist/` file into each.
+5. **Choose image** to add the Pokeball icon if you want it.
+6. Badge off, USB data cable in, badge on. **Connect**, choose **USB JTAG/serial debug unit**.
+7. **Push**. The console should list `slug=hackamon` with all the files.
+8. Click **Reboot** the first time, since the manifest sets a 96 KB Lua quota.
+9. Open Hackamon from the launcher.
 
 Push never deletes files on the badge. If an older layout left extra files in
 `/littlefs/apps/hackamon`, remove them with `rm` in the IDE console; Share allows at
@@ -88,9 +91,9 @@ If the console says `cannot open .../data.lua`, the second file is missing or mi
 If it says `main.lua is not a regular file`, the code file in the workspace is not named
 `main.lua`.
 
-On first launch the game renders each sprite into a 44x44 four-bit indexed image file with a transparent background in the app folder, about 1.1 KB each, which keeps the whole app near 39 KB so it fits the 48 KiB Share limit with the icon
+On first launch the game renders each sprite into 44x44 image files in the app folder: the enemy set is four-bit indexed with a transparent background so it can parade over the night sky, and the player set is plain RGB565 with the cream battle background baked in, which looks the same on the field but draws straight from the file instead of decoding to a 7.7 KB bitmap in RAM
 (`s1.bin` to `s4.bin` for the enemy view, `m1.bin` to `m4.bin` for the mirrored player
-view, about 9 KB total). The screen says "First launch: preparing sprites"
+view, about 20 KB total). The screen says "First launch: preparing sprites"
 for a few seconds while that happens, then every later launch is instant. If you
 change a sprite in `data.lua`, delete the matching `.bin` files in the IDE console, for
 example `rm /littlefs/apps/hackamon/s2.bin`, so they get rebuilt.

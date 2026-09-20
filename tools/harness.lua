@@ -91,7 +91,7 @@ chunk()
 on_enter({})
 ticks(120)                       -- first-launch render: 88 parts
 assert(files["s1.bin"] and #files["s1.bin"]==1132,"s1.bin not rendered: "..tostring(files["s1.bin"] and #files["s1.bin"]))
-assert(files["m4.bin"] and #files["m4.bin"]==1132,"m4.bin not rendered")
+assert(files["m4.bin"] and #files["m4.bin"]==3884,"m4.bin not rendered: "..tostring(files["m4.bin"] and #files["m4.bin"]))
 assert(TITLE,"title not loaded")
 ticks(150)                       -- parade
 press(B.A) ticks(40)             -- wipe to home

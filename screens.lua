@@ -1,6 +1,6 @@
 -- Widgets and the title screen. Loaded once at startup. The widget table W stays for
 -- the whole session; the title code is dropped after the wipe (main sets TITLE=nil).
--- Reads the global UI_ROOT; the title also reads the global EI (enemy image widget).
+-- Reads the globals UI_ROOT, act and spr; creates the sprite images EI and PI.
 local root=UI_ROOT
 W={}
 local function lbl(f,al,x,y)
@@ -64,4 +64,8 @@ function TITLE.tick(now)
   badge.led.show()
   return false
 end
+
+EI=badge.ui.image(root,spr(1,false)) EI:align("top_right",-10,6)
+PI=badge.ui.image(root,spr(act,true)) PI:align("bottom_left",14,-70) PI:hidden(true)
+S=7 TITLE.start()
 return W

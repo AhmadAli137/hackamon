@@ -116,14 +116,13 @@ scan=function(on)
     else MSG:set_text("NFC reader\nunavailable.") end
   elseif nfc then badge.nfc.disable() nfc=false end
 end
--- Build the widgets, create the sprite widgets (the image files exist by now) and run the title.
+-- screens.lua builds the widgets and the sprite images (the files exist by now) and
+-- starts the title.
 local function start()
   if TMP then TMP:delete() TMP=nil end
   require("screens") gc()
   EN,EB,EH,PN,PB,PH,MSG,MENU,CUE,BG=W.EN,W.EB,W.EH,W.PN,W.PB,W.PH,W.MSG,W.MENU,W.CUE,W.BG
-  EI=badge.ui.image(R,spr(1,false)) EI:align("top_right",-10,6)
-  PI=badge.ui.image(R,spr(act,true)) PI:align("bottom_left",14,-70) PI:hidden(true)
-  log("screens loaded") S=7 TITLE.start()
+  log("screens loaded")
 end
 
 function on_enter(root)
@@ -136,7 +135,7 @@ function on_enter(root)
   log(_VERSION.." main lua "..badge.sys.heap())
   -- Render sprite images once, a few rows per tick, before any widgets exist.
   -- Bump the number when sprites change.
-  if badge.store.get_int("imgs",0)~=7 then
+  if badge.store.get_int("imgs",0)~=8 then
     S=9 TMP=badge.ui.label(root,"First launch:\npreparing sprites...") TMP:align("center",0,0)
     require("gen") gc() log("renderer loaded")
   else start() end
@@ -147,7 +146,7 @@ function on_tick()
   if S==10 then if now>=nxt then badge.app.exit() end return end
   if S==9 then
     if (now//150)%2==0 then badge.led.set_all(0,30,120) else badge.led.set_all(0,10,40) end badge.led.show()
-    if GEN() then GEN=nil SPR=nil gc() badge.store.set_int("imgs",7) log("renderer dropped") start() end
+    if GEN() then GEN=nil SPR=nil gc() badge.store.set_int("imgs",8) log("renderer dropped") start() end
     return
   end
   if TITLE and TITLE.tick(now) then TITLE=nil gc() log("title dropped") end
