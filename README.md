@@ -28,8 +28,6 @@ Electric. Super effective hits do 1.5x, resisted hits 0.5x.
   game. Leaving fragments the badge's memory until the next reboot, so play stays inside
   the app rather than bouncing through the launcher.
 - Home: **SCAN** turns on the NFC reader. **SWITCH LEAD** picks which Pokemon goes first.
-  **HACKADEX** lists all four Pokemon: caught ones are starred, seen ones show their sprite
-  and stats, unseen ones show as ???.
 - Hold a sticker to the back of the badge. A wild Pokemon appears.
 - Battle: UP/DOWN pick a move, A uses it, B runs. A advances the dialogue, and HP bars
   drop in step with the text. The attacker lunges, the target shakes and darkens, and

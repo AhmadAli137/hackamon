@@ -24,15 +24,13 @@ local P={
  {"BULBASAUR",45,3,{"TACKLE",7},{"LEECH SEED",0,"seed"}},
 }
 local BIT,SUP,TP={1,2,4,8},{3,1,2,2},{"fire","water","grass","elec"}
-local TN={"FIRE","WATER","GRASS","ELECTRIC"}
-local S,cur,act,owned,seen,nfc,nxt=0,1,1,1,1,false,0
+local S,cur,act,owned,nfc,nxt=0,1,1,1,false,0
 local me,en,team={},{},{}
 local q,qi,after={},0,nil
 local R,EN,EB,EH,PN,PB,PH,MSG,MENU,BG,PI
 -- W (widgets), EI (enemy image), UI_ROOT and TITLE are globals shared with the one-shot modules.
 
 local function own(i) return (owned//BIT[i])%2==1 end
-local function met(i) return (seen//BIT[i])%2==1 end
 local function gc() collectgarbage("collect") end
 local function gcset(p)
   if _VERSION=="Lua 5.5" then collectgarbage("param","pause",p) collectgarbage("param","stepmul",400)
@@ -62,7 +60,7 @@ end
 local function side(i,e)
   return {id=i,hp=P[i][2],max=P[i][2],burn=0,seed=0,def=0,par=0,name=(e and "Enemy " or "")..P[i][1]}
 end
-local function save() badge.store.set_int("act",act) badge.store.set_int("owned",owned) badge.store.set_int("seen",seen) end
+local function save() badge.store.set_int("act",act) badge.store.set_int("owned",owned) end
 
 -- Dialogue queue. Each line snapshots HP so bars move with the text; f = side hit, p = fx pattern.
 local function push(m,f,p) q[#q+1]={m,P[me.id][1],me.hp,me.max,en.id and en.hp or 0,f,p} end
@@ -84,19 +82,8 @@ local function home()
   EN:style({text_font=16,text_color=0x101010}) EN:set_text("Team "..n.."/4")
   EH:style({text_color=0x101010}) EH:set_text("")
   PI:set_src(spr(act,true)) bars(P[act][1],me.hp,me.max,0)
-  MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD","HACKADEX","EXIT"})
+  MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD","EXIT"})
   FX.idle(P[act][3]) FX.mode("home") log("home")
-end
--- Hackadex: reuses the enemy panel and image widget, so it costs no extra widgets.
-local function dex()
-  S=6 FX.mode(nil)
-  local i,s=cur,met(cur)
-  EI:hidden(not s) if s then EI:set_src(spr(i,false)) end
-  EN:set_text(s and P[i][1] or "???") EH:set_text(s and ("HP "..P[i][2].."  "..TN[P[i][3]]) or "")
-  MSG:set_text("HACKADEX "..i.."/4\n"..(own(i) and "Caught!" or (s and "Seen" or "Not found yet")))
-  local t={}
-  for j=1,4 do t[j]=(met(j) and P[j][1] or "???")..(own(j) and " *" or "") end
-  menu(t)
 end
 local function items()
   local t={P[me.id][4][1],P[me.id][5][1]}
@@ -159,13 +146,12 @@ local function turn()
     f=home
   elseif me.hp==0 then
     push(P[me.id][1].."\nfainted!",nil,"lose") push("You lost all\nyour Pokemon...") push("Starting over\nwith PIKACHU.")
-    f=function() owned=1 act=1 seen=1 save() home() end
+    f=function() owned=1 act=1 save() home() end
   end
   say(f)
 end
 local function encounter(i)
   en=side(i,true) team={} FX.mode(nil)
-  if not met(i) then seen=seen+BIT[i] save() end
   for j=1,4 do if own(j) then team[j]=P[j][2] end end
   me=side(act)
   EB:hidden(false) EI:set_src(spr(i,false)) EI:hidden(false) log("wild "..i)
@@ -193,7 +179,7 @@ function on_enter(root)
   -- Default GC waits for memory to double before finishing a cycle; with this much live
   -- code and this little spare RAM that never happens. Collect continuously instead.
   gcset(100)
-  act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1) seen=badge.store.get_int("seen",1)
+  act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1)
   if not own(act) then act=1 end
   UI_ROOT=root W=require("ui") gc()
   EN,EB,EH,PN,PB,PH,MSG,MENU,BG=W.EN,W.EB,W.EH,W.PN,W.PB,W.PH,W.MSG,W.MENU,W.BG
@@ -235,12 +221,11 @@ function on_button(b,k)
   gc()
   local up,dn,A,B=b==I.UP,b==I.DOWN,b==I.A,b==I.B
   if S==0 then
-    local hm={"SCAN","SWITCH LEAD","HACKADEX","EXIT"}
-    if up then cur=(cur+2)%4+1 menu(hm)
-    elseif dn then cur=cur%4+1 menu(hm)
+    local hm={"SCAN","SWITCH LEAD","EXIT"}
+    if up then cur=(cur+1)%3+1 menu(hm)
+    elseif dn then cur=cur%3+1 menu(hm)
     elseif A and cur==1 then scan(true)
-    elseif A and cur==3 then cur=act dex()
-    elseif A and cur==4 then badge.app.exit()
+    elseif A and cur==3 then badge.app.exit()
     elseif A then for _=1,4 do act=act%4+1 if own(act) then break end end save() home() end
   elseif S==2 then
     if B then scan(false) home() end
@@ -265,8 +250,6 @@ function on_button(b,k)
       me=side(i) me.hp=team[i] PI:set_src(spr(i,true))
       push("Go! "..P[i][1].."!") turn()
     end
-  elseif S==6 then
-    if up then cur=(cur+2)%4+1 dex() elseif dn then cur=cur%4+1 dex() elseif B or A then home() end
   elseif S==7 then
     if A then S=8 TITLE.go(home) end
   elseif S==4 and A and not FX.busy() then advance() end
