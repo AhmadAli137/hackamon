@@ -1,4 +1,4 @@
--- Sprite image renderer. Loaded only on a first launch. Each call renders two sprite
+-- Sprite image renderer. Loaded once on a first launch as the global GEN, then cleared. Each call renders two sprite
 -- rows of one image (part 1..10) so the work spreads across ticks. Scale is 2.2x: every
 -- fifth column and row is 3 px, the rest 2, so a 20x20 sprite becomes 44x44.
 -- fmt "rgb": LVGL v9 RGB565, background baked in as cream. 3,884 bytes per image.
@@ -12,7 +12,7 @@ end
 local function wd(i) return (i%5==0) and 3 or 2 end
 
 -- SP = sprites.lua table, id = Pokemon index, mirror = face right, part = 1..10
-return function(SP,id,mirror,name,part,fmt)
+GEN=function(SP,id,mirror,name,part,fmt)
   local pal,spr=SP[id][1],SP[id][2]
   local keys={}
   for k in pairs(pal) do keys[#keys+1]=k end

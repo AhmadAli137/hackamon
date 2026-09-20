@@ -192,20 +192,21 @@ function on_enter(root)
   log(_VERSION.." ui lua "..badge.sys.heap())
   -- Render sprite images once, a few rows per tick. Bump the number when sprites change.
   if badge.store.get_int("imgs",0)~=5 then
-    S=9 job=1 EB:hidden(true) PB:hidden(true) MSG:set_text("First launch:\npreparing\nsprites...") gcset(200)
+    S=9 job=1 EB:hidden(true) PB:hidden(true) MSG:set_text("First launch:\npreparing\nsprites...")
+    require("sprites") require("gen") gc() log("renderer loaded")
   else start() end
 end
 
 function on_tick()
   local now=badge.sys.ms()
   if S==9 then
-    -- 8 images x 10 parts. The continuous GC is relaxed here or the loop misses the tick deadline.
+    -- 8 images x 10 parts, a full collection after each so garbage never piles up.
     local k=(job-1)//10+1
     -- Pikachu (id 1) is rendered 4-bit indexed as the transparency / RAM experiment.
     local id=(k+1)//2
-    require("gen")(require("sprites"),id,k%2==0,spr(id,k%2==0),(job-1)%10+1,id==1 and "i4" or "rgb")
-    job=job+1
-    if job>80 then badge.store.set_int("imgs",5) gcset(100) gc() start() end
+    GEN(SPR,id,k%2==0,spr(id,k%2==0),(job-1)%10+1,id==1 and "i4" or "rgb")
+    job=job+1 gc()
+    if job>80 then GEN=nil SPR=nil gc() badge.store.set_int("imgs",5) log("renderer dropped") start() end
     return
   end
   if TITLE and TITLE.tick(now) then TITLE=nil gc() log("title dropped") end
