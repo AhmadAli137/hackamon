@@ -105,8 +105,8 @@ end
 local function arm()
   if FX then return end
   MSG:set_text("Loading...") MENU:set_text("")
-  require("battle") gc()
-  FX=require("fx") FX.init(R,EI,PI) gc() log("battle and fx loaded")
+  require("battle") gc() log("battle loaded")
+  FX=require("fx") FX.init(R,EI,PI) gc() log("fx loaded")
 end
 scan=function(on)
   if on then
@@ -179,7 +179,13 @@ function on_button(b,k)
     local hm={"SCAN","SWITCH LEAD","EXIT"}
     if up then cur=(cur+1)%3+1 menu(hm)
     elseif dn then cur=cur%3+1 menu(hm)
-    elseif A and cur==1 then scan(true)
+    elseif A and cur==1 then
+      -- The battle code needs about 20 KB to load; refuse cleanly instead of crashing.
+      local fr=badge.sys.stats().free_heap log("scan")
+      if FX or fr>=20000 then scan(true)
+      else MENU:set_text("") MSG:set_size(272,58) MSG:set_text("Low memory. Power the
+badge off and on,
+then play again.") end
     elseif A and cur==3 then bye()
     elseif A then for _=1,4 do act=act%4+1 if own(act) then break end end save() home() end
   elseif S==2 then
