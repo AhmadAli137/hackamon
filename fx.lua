@@ -15,7 +15,8 @@ local PB={}
 
 local function set(i,c,k) badge.led.set(i,(c//65536)*k//255,((c//256)%256)*k//255,(c%256)*k//255) end
 local function place(w,en,dx,dy) if en then w:align("top_right",-10+dx,6+dy) else w:align("bottom_left",14+dx,-70+dy) end end
-local function put(b,en,x,y,w,h) if en then b:align("top_right",-60+x+w,6+y) else b:align("bottom_left",14+x,-120+y+h) end end
+local SZ=44   -- sprite image size in px
+local function put(b,en,x,y,w,h) if en then b:align("top_right",-10-SZ+x+w,6+y) else b:align("bottom_left",14+x,-70-SZ+y+h) end end
 local function pbox(i)
   local b=PB[i]
   if not b then b=badge.ui.box(ROOT,8,8) b:style({border_width=0}) b:hidden(true) PB[i]=b end
@@ -29,9 +30,9 @@ local function particles(en,h,kind)
     local b=pbox(i)
     local w,hh=ps[1],ps[2]
     local x,y
-    if kind=="fire" or kind=="water" then x=4+((i*13+h//60)%40) y=46-((h//7+i*9)%46)
-    elseif kind=="grass" then x=2+((i*11+h//40)%40) y=((h//8+i*9)%46)
-    else x=badge.sys.random(40) y=badge.sys.random(40) if (i+h//50)%3==0 then w,hh=12,4 end end
+    if kind=="fire" or kind=="water" then x=2+((i*13+h//60)%36) y=40-((h//7+i*9)%40)
+    elseif kind=="grass" then x=((i*11+h//40)%36) y=((h//8+i*9)%40)
+    else x=badge.sys.random(34) y=badge.sys.random(34) if (i+h//50)%3==0 then w,hh=12,4 end end
     b:set_size(w,hh) b:style({bg_color=pc[(i+h//90)%2+1],radius=ps[3]})
     put(b,en,x,y,w,hh)
     b:hidden(kind=="elec" and badge.sys.random(3)==0)
