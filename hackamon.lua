@@ -101,8 +101,9 @@ local function bye()
   MENU:set_text("") MSG:set_size(272,58)
   MSG:set_text("Team saved. Power the\nbadge off and on before\nplaying again.")
 end
--- The battle code and effects load on the first SCAN, before the NFC reader is on.
-local function arm()
+-- The battle code and effects load right after the title is dropped, or failing that on
+-- the first SCAN, before the NFC reader is on.
+function arm()
   if FX then return end
   MSG:set_text("Loading...") MENU:set_text("")
   require("battle") gc() log("battle loaded")
@@ -149,7 +150,12 @@ function on_tick()
     if GEN() then GEN=nil SPR=nil gc() badge.store.set_int("imgs",8) log("renderer dropped") start() end
     return
   end
-  if TITLE and TITLE.tick(now) then TITLE=nil gc() log("title dropped") end
+  -- The block the title code just freed is the cleanest this session will offer, so the
+  -- battle code loads right here rather than later at SCAN.
+  if TITLE and TITLE.tick(now) then
+    TITLE=nil gc() log("title dropped")
+    if badge.sys.stats().free_heap>=20000 then arm() MSG:set_text("What will you\ndo?") menu({"SCAN","SWITCH LEAD","EXIT"}) end
+  end
   if S==0 then idle(now) return end
   if FX then FX.tick(now) end
   if S==4 then CUE:hidden(FX.busy() or (now//400)%2==1) end
