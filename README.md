@@ -56,12 +56,13 @@ phone app. Uppercase, no spaces.
 
 ## Installing
 
-The game is five Lua files plus the icon. The badge only has RAM for the code a screen
-needs, and a launch on a fragmented heap fails on large allocations, so the files are
-kept small. `hackamon.lua` (manifest header, stats, menus, scanning) and `battle.lua`
-(moves, effects, encounters) and `fx.lua` (lights and motion) stay loaded. `screens.lua`
-builds the widgets and runs the title parade, whose code is dropped after the wipe.
-`gen.lua` holds the sprite art and renders the image files on first launch, then is dropped.
+The game is five Lua files plus the icon. The badge has about 77 KB of RAM for
+everything, less on a badge that has been played on, so only `hackamon.lua` (manifest
+header, stats, menus, scanning, home screen) and `screens.lua` (widgets and the title
+parade, whose code is dropped after the wipe) load at launch. `battle.lua` (moves,
+effects, encounters) and `fx.lua` (lights, motion, particles) load the first time the
+player picks SCAN, before the NFC reader is switched on. `gen.lua` holds the sprite art
+and renders the image files on first launch before any widgets exist, then is dropped.
 
 1. Open the badge IDE in Chrome or Edge.
 2. **Import app**, paste the whole of `hackamon.lua` including the header, **Replace editor files**.

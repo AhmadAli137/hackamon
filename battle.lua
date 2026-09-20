@@ -1,5 +1,5 @@
 -- Battle logic: moves, status effects, the enemy's turn, encounters, and the battle
--- menus. Loaded once at startup and resident for the session. Shares state with
+-- menus. Loaded with fx.lua on the first SCAN and resident for the session. Shares state with
 -- main.lua through globals: P BIT SUP TP S cur act owned me en team, the helpers own
 -- spr log push say menu side save home, the widget table W, images EI PI, and FX.
 BT={}
@@ -70,7 +70,7 @@ local function turn()
 end
 
 function BT.encounter(i)
-  en=side(i,true) team={} FX.mode(nil)
+  en=side(i,true) team={} FX.reset() FX.idle(P[act][3])
   for j=1,4 do if own(j) then team[j]=P[j][2] end end
   me=side(act)
   W.EB:hidden(false) EI:set_src(spr(i,false)) EI:hidden(false) log("wild "..i)
@@ -98,7 +98,7 @@ function BT.button(up,dn,A,B)
     elseif A then
       local i=o[cur]
       push("Come back,\n"..P[me.id][1].."!") team[me.id]=me.hp
-      me=side(i) me.hp=team[i] PI:set_src(spr(i,true))
+      me=side(i) me.hp=team[i] PI:set_src(spr(i,true)) FX.idle(P[i][3])
       push("Go! "..P[i][1].."!") turn()
     end
   end

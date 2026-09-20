@@ -1,21 +1,22 @@
--- Battle light shows, sprite motion, elemental particles and the home idle animation.
+-- Battle light shows, sprite motion and elemental particles. Loaded with battle.lua
+-- when the player first scans, and resident from then on.
 -- LED colours are tuned for the badge's LEDs, whose green channel is far brighter than red:
 -- keep green low or orange turns yellow and yellow turns white.
 -- Left LED column {1,6,5} is your side, right {2,3,4} the enemy's.
 local M={}
 local L,R={1,6,5},{2,3,4}
 local ROOT,EI,PI,pat,long,side,t0,dur
-local idle,mode,mt=0,nil,0
+local idle=0
 local C={fire=0xff1800,water=0x0030ff,grass=0x08d020,elec=0xffa000,burn=0xff0800,seed=0x08c018,par=0xffa000,def=0x1060ff,win=0x00ff30,lose=0xff0000,appear=0xffffff}
 local TYPE={"fire","water","grass","elec"}
 local MOVE={fire=1,water=1,grass=1,elec=1}
 local PC={fire={0xff4000,0xffc000},water={0x40a0ff,0xd0f0ff},grass={0x20c040,0x90e060},elec={0xffe000,0xffffff}}
 local PS={fire={8,8,4},water={9,9,4},grass={11,5,2},elec={4,12,1}}
 local PB={}
+local SZ=44   -- sprite image size in px
 
 local function set(i,c,k) badge.led.set(i,(c//65536)*k//255,((c//256)%256)*k//255,(c%256)*k//255) end
 local function place(w,en,dx,dy) if en then w:align("top_right",-10+dx,6+dy) else w:align("bottom_left",14+dx,-70+dy) end end
-local SZ=44   -- sprite image size in px
 local function put(b,en,x,y,w,h) if en then b:align("top_right",-10-SZ+x+w,6+y) else b:align("bottom_left",14+x,-70-SZ+y+h) end end
 local function pbox(i)
   local b=PB[i]
@@ -41,9 +42,10 @@ end
 
 function M.init(root,ei,pi) ROOT,EI,PI=root,ei,pi end
 function M.busy() return pat~=nil end
+-- idle LED colour by Pokemon type index (1 fire 2 water 3 grass 4 electric), shown between patterns
 function M.idle(t) idle=C[TYPE[t]] or idle if not pat then for i=1,6 do set(i,idle,200) end badge.led.show() end end
--- "home" = breathing glow and bobbing lead sprite, nil = still
-function M.mode(m) mode,mt=m,badge.sys.ms() place(EI,true,0,0) place(PI,false,0,0) hidep() end
+-- sprites back to their places, particles hidden
+function M.reset() pat=nil place(EI,true,0,0) place(PI,false,0,0) hidep() end
 
 -- p is a pattern name, with a trailing "L" for a long move. s is the side the effect lands on.
 function M.start(p,s)
@@ -56,19 +58,9 @@ function M.start(p,s)
 end
 
 function M.tick(now)
-  if not pat then
-    if mode=="home" then
-      local t=now-mt
-      local k=math.floor(120+80*math.sin(t/500))
-      for i=1,6 do set(i,idle,k) end badge.led.show()
-      place(PI,false,0,-math.floor(2+2*math.sin(t/300)))
-    end
-    return
-  end
+  if not pat then return end
   local t=now-t0
-  if t>=dur then
-    pat=nil M.idle(0) place(EI,true,0,0) place(PI,false,0,0) EI:hidden(false) PI:hidden(false) hidep() mt=now return
-  end
+  if t>=dur then M.reset() EI:hidden(false) PI:hidden(false) M.idle(0) return end
   local c,tg=C[pat],(side=="en") and R or L
   local tw=(side=="en") and EI or PI
   badge.led.clear()
