@@ -27,6 +27,10 @@ local R,EN,EB,EH,PN,PB,PH,MSG,MENU,BG,PI
 local function own(i) return (owned//BIT[i])%2==1 end
 local function met(i) return (seen//BIT[i])%2==1 end
 local function gc() collectgarbage("collect") end
+local function gcset(p)
+  if _VERSION=="Lua 5.5" then collectgarbage("param","pause",p) collectgarbage("param","stepmul",400)
+  else collectgarbage("incremental",p,400) end
+end
 -- Sprite images live in appdata, which is per badge and never included in a Share bundle.
 local function spr(i,m) return "appdata/"..(m and "m" or "s")..i..".bin" end
 local function log(t) badge.sys.log(t.." free "..badge.sys.stats().free_heap) end
@@ -179,8 +183,7 @@ function on_enter(root)
   R=root gc()
   -- Default GC waits for memory to double before finishing a cycle; with this much live
   -- code and this little spare RAM that never happens. Collect continuously instead.
-  if _VERSION=="Lua 5.5" then collectgarbage("param","pause",100) collectgarbage("param","stepmul",400)
-  else collectgarbage("incremental",100,400) end
+  gcset(100)
   P=require("data")
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1) seen=badge.store.get_int("seen",1)
   if not own(act) then act=1 end
@@ -189,17 +192,18 @@ function on_enter(root)
   log(_VERSION.." ui lua "..badge.sys.heap())
   -- Render sprite images once, a few rows per tick. Bump the number when sprites change.
   if badge.store.get_int("imgs",0)~=4 then
-    S=9 job=1 EB:hidden(true) PB:hidden(true) MSG:set_text("First launch:\npreparing\nsprites...")
+    S=9 job=1 EB:hidden(true) PB:hidden(true) MSG:set_text("First launch:\npreparing\nsprites...") gcset(200)
   else start() end
 end
 
 function on_tick()
   local now=badge.sys.ms()
   if S==9 then
-    local k=(job-1)//4+1
-    require("gen")(require("sprites"),(k+1)//2,k%2==0,spr((k+1)//2,k%2==0),(job-1)%4+1)
-    job=job+1 gc()
-    if job>32 then badge.store.set_int("imgs",4) start() end
+    -- 8 images x 10 parts. The continuous GC is relaxed here or the loop misses the tick deadline.
+    local k=(job-1)//10+1
+    require("gen")(require("sprites"),(k+1)//2,k%2==0,spr((k+1)//2,k%2==0),(job-1)%10+1)
+    job=job+1
+    if job>80 then badge.store.set_int("imgs",4) gcset(100) gc() start() end
     return
   end
   if TITLE and TITLE.tick(now) then TITLE=nil gc() log("title dropped") end
