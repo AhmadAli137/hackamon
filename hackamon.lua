@@ -13,9 +13,16 @@ home_button=1
 -- HOME returns to the home screen from anywhere; EXIT on the home menu leaves the game.
 -- (Exiting leaves the badge heap fragmented until reboot, so the app stays resident.)
 -- The badge only has RAM for the code a screen needs, so one-shot code is loaded, used
--- and dropped: ui.lua (widgets), title.lua (parade + wipe), gen.lua + sprites.lua (first
--- launch render). data.lua (stats) and fx.lua (battle lights, motion) stay resident.
-local P,FX
+-- and dropped: ui.lua (widgets), title.lua (parade + wipe), gen.lua (first-launch sprite
+-- render). Only fx.lua (battle lights, motion) stays resident beside this file.
+local FX
+-- name, hp, type (1 fire 2 water 3 grass 4 electric), attack {name,power}, effect {name,power,effect}
+local P={
+ {"PIKACHU",35,4,{"QUICK ATTACK",7},{"THUNDER WAVE",0,"par"}},
+ {"CHARMANDER",39,1,{"SCRATCH",7},{"EMBER",4,"burn"}},
+ {"SQUIRTLE",44,2,{"TACKLE",7},{"WITHDRAW",0,"def"}},
+ {"BULBASAUR",45,3,{"TACKLE",7},{"LEECH SEED",0,"seed"}},
+}
 local BIT,SUP,TP={1,2,4,8},{3,1,2,2},{"fire","water","grass","elec"}
 local TN={"FIRE","WATER","GRASS","ELECTRIC"}
 local S,cur,act,owned,seen,nfc,nxt,job=0,1,1,1,1,false,0,0
@@ -31,8 +38,8 @@ local function gcset(p)
   if _VERSION=="Lua 5.5" then collectgarbage("param","pause",p) collectgarbage("param","stepmul",400)
   else collectgarbage("incremental",p,400) end
 end
--- Sprite images live in appdata, which is per badge and never included in a Share bundle.
-local function spr(i,m) return "appdata/"..(m and "m" or "s")..i..".bin" end
+-- Sprite image files live in the app folder (the image widget accepts nothing else).
+local function spr(i,m) return (m and "m" or "s")..i..".bin" end
 local function log(t) badge.sys.log(t.." free "..badge.sys.stats().free_heap) end
 local function fx()
   if not FX then FX=require("fx") FX.init(R,EI,PI) gc() end
@@ -184,29 +191,29 @@ function on_enter(root)
   -- Default GC waits for memory to double before finishing a cycle; with this much live
   -- code and this little spare RAM that never happens. Collect continuously instead.
   gcset(100)
-  P=require("data")
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1) seen=badge.store.get_int("seen",1)
   if not own(act) then act=1 end
   UI_ROOT=root W=require("ui") gc()
   EN,EB,EH,PN,PB,PH,MSG,MENU,BG=W.EN,W.EB,W.EH,W.PN,W.PB,W.PH,W.MSG,W.MENU,W.BG
   log(_VERSION.." ui lua "..badge.sys.heap())
   -- Render sprite images once, a few rows per tick. Bump the number when sprites change.
-  if badge.store.get_int("imgs",0)~=5 then
+  if badge.store.get_int("imgs",0)~=6 then
     S=9 job=1 EB:hidden(true) PB:hidden(true) MSG:set_text("First launch:\npreparing\nsprites...")
-    require("sprites") require("gen") gc() log("renderer loaded")
+    for i=1,4 do badge.fs.remove("appdata/s"..i..".bin") badge.fs.remove("appdata/m"..i..".bin") end
+    require("gen") gc() log("renderer loaded")
   else start() end
 end
 
 function on_tick()
   local now=badge.sys.ms()
   if S==9 then
-    -- 8 images x 10 parts, a full collection after each so garbage never piles up.
-    local k=(job-1)//10+1
+    -- 8 images x 11 parts (10 render, 1 write), a full collection after each.
+    local k=(job-1)//11+1
     -- Pikachu (id 1) is rendered 4-bit indexed as the transparency / RAM experiment.
     local id=(k+1)//2
-    GEN(SPR,id,k%2==0,spr(id,k%2==0),(job-1)%10+1,id==1 and "i4" or "rgb")
+    GEN(SPR,id,k%2==0,spr(id,k%2==0),(job-1)%11+1,id==1 and "i4" or "rgb")
     job=job+1 gc()
-    if job>80 then GEN=nil SPR=nil gc() badge.store.set_int("imgs",5) log("renderer dropped") start() end
+    if job>88 then GEN=nil SPR=nil gc() badge.store.set_int("imgs",6) log("renderer dropped") start() end
     return
   end
   if TITLE and TITLE.tick(now) then TITLE=nil gc() log("title dropped") end

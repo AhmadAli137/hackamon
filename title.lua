@@ -32,7 +32,7 @@ function TITLE.tick(now)
   local t=now-t0
   W.EN:align("top_left",8,6-math.floor(3+3*math.sin(t/250)))
   local u,k=t%1900,(t//1900)%4+1
-  if k~=pk then pk=k EI:set_src("appdata/"..(k==2 and "m" or "s")..k..".bin") EI:hidden(false) end
+  if k~=pk then pk=k EI:set_src((k==2 and "m" or "s")..k..".bin") EI:hidden(false) end
   local dx
   if u<500 then dx=70-205*u//500 elseif u<1400 then dx=-135 else dx=-135-200*(u-1400)//500 end
   local dy=(u>=500 and u<1400) and -math.floor(6*math.abs(math.sin((u-500)/150))) or 0

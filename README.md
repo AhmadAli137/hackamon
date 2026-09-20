@@ -56,19 +56,19 @@ phone app. Uppercase, no spaces.
 
 ## Installing
 
-The game is seven small files, because the badge only has RAM for the code a screen
-needs. `hackamon.lua` (manifest header plus game code), `data.lua` (stats) and `fx.lua`
-(battle lights and motion) stay loaded. `ui.lua` (widget builder), `title.lua` (title
-parade and wipe), `gen.lua` and `sprites.lua` (first-launch sprite renderer) are loaded
-once, used, and dropped.
+The game is five Lua files plus the icon, because the badge only has RAM for the code a
+screen needs. `hackamon.lua` (manifest header plus game code and Pokemon stats) and
+`fx.lua` (battle lights and motion) stay loaded. `ui.lua` (widget builder), `title.lua`
+(title parade and wipe) and `gen.lua` (sprite art and the first-launch renderer) are
+loaded once, used, and dropped.
 
 1. Open the badge IDE in Chrome or Edge.
 2. **Import app**, paste the whole of `hackamon.lua` including the header, **Replace editor files**.
-3. Click **+** and add each of `data.lua`, `fx.lua`, `ui.lua`, `title.lua`, `gen.lua` and
-   `sprites.lua`, named exactly, pasting the repo file into each.
-4. Remove `icon.bin` from the workspace, or keep it if you want the custom icon.
+3. Click **+** and add each of `fx.lua`, `ui.lua`, `title.lua` and `gen.lua`, named exactly,
+   pasting the repo file into each.
+4. **Choose image** to add the Pokeball icon if you want it.
 5. Badge off, USB data cable in, badge on. **Connect**, choose **USB JTAG/serial debug unit**.
-6. **Push**. The console should list `slug=hackamon` with all seven files.
+6. **Push**. The console should list `slug=hackamon` with all the files.
 7. Click **Reboot** the first time, since the manifest sets a 96 KB Lua quota.
 8. Open Hackamon from the launcher.
 
@@ -76,9 +76,9 @@ If the console says `cannot open .../data.lua`, the second file is missing or mi
 If it says `main.lua is not a regular file`, the code file in the workspace is not named
 `main.lua`.
 
-On first launch the game renders each sprite into a 44x44 image file in its private appdata folder, which keeps the app folder at about 28 KB so it fits the 48 KiB Share limit and, with the images, the 64 KiB storage quota
+On first launch the game renders each sprite into a 44x44 image file in the app folder
 (`s1.bin` to `s4.bin` for the enemy view, `m1.bin` to `m4.bin` for the mirrored player
 view, about 31 KB total). The screen says "First launch: preparing sprites"
 for a few seconds while that happens, then every later launch is instant. If you
 change a sprite in `data.lua`, delete the matching `.bin` files in the IDE console, for
-example `rm /littlefs/appdata/hackamon/s2.bin`, so they get rebuilt.
+example `rm /littlefs/apps/hackamon/s2.bin`, so they get rebuilt.
