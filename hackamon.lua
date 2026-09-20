@@ -185,7 +185,7 @@ function on_enter(root)
   EN,EB,EH,PN,PB,PH,MSG,MENU,BG=W.EN,W.EB,W.EH,W.PN,W.PB,W.PH,W.MSG,W.MENU,W.BG
   log(_VERSION.." ui lua "..badge.sys.heap())
   -- Render sprite images once, a few rows per tick. Bump the number when sprites change.
-  if badge.store.get_int("imgs",0)~=6 then
+  if badge.store.get_int("imgs",0)~=7 then
     S=9 EB:hidden(true) PB:hidden(true) MSG:set_text("First launch:\npreparing\nsprites...")
     require("gen") gc() log("renderer loaded")
   else start() end
@@ -194,7 +194,7 @@ end
 function on_tick()
   local now=badge.sys.ms()
   if S==9 then
-    if GEN() then GEN=nil SPR=nil gc() badge.store.set_int("imgs",6) log("renderer dropped") start() end
+    if GEN() then GEN=nil SPR=nil gc() badge.store.set_int("imgs",7) log("renderer dropped") start() end
     return
   end
   if TITLE and TITLE.tick(now) then TITLE=nil gc() log("title dropped") end

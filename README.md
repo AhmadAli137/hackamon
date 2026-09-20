@@ -74,9 +74,9 @@ If the console says `cannot open .../data.lua`, the second file is missing or mi
 If it says `main.lua is not a regular file`, the code file in the workspace is not named
 `main.lua`.
 
-On first launch the game renders each sprite into a 44x44 image file in the app folder
+On first launch the game renders each sprite into a 44x44 four-bit indexed image file with a transparent background in the app folder, about 1.1 KB each, which keeps the whole app near 39 KB so it fits the 48 KiB Share limit with the icon
 (`s1.bin` to `s4.bin` for the enemy view, `m1.bin` to `m4.bin` for the mirrored player
-view, about 31 KB total). The screen says "First launch: preparing sprites"
+view, about 9 KB total). The screen says "First launch: preparing sprites"
 for a few seconds while that happens, then every later launch is instant. If you
 change a sprite in `data.lua`, delete the matching `.bin` files in the IDE console, for
 example `rm /littlefs/apps/hackamon/s2.bin`, so they get rebuilt.
