@@ -56,21 +56,32 @@ phone app. Uppercase, no spaces.
 
 ## Installing
 
-The game is five Lua files plus the icon, because the badge only has RAM for the code a
-screen needs. `hackamon.lua` (manifest header plus game code and Pokemon stats) and
-`fx.lua` (battle lights and motion) stay loaded. `ui.lua` (widget builder), `title.lua`
-(title parade and wipe) and `gen.lua` (sprite art and the first-launch renderer) are
-loaded once, used, and dropped.
+The game is five Lua files plus the icon. The badge only has RAM for the code a screen
+needs, and a launch on a fragmented heap fails on large allocations, so the files are
+kept small. `hackamon.lua` (manifest header, stats, menus, scanning) and `battle.lua`
+(moves, effects, encounters) and `fx.lua` (lights and motion) stay loaded. `screens.lua`
+builds the widgets and runs the title parade, whose code is dropped after the wipe.
+`gen.lua` holds the sprite art and renders the image files on first launch, then is dropped.
 
 1. Open the badge IDE in Chrome or Edge.
 2. **Import app**, paste the whole of `hackamon.lua` including the header, **Replace editor files**.
-3. Click **+** and add each of `fx.lua`, `ui.lua`, `title.lua` and `gen.lua`, named exactly,
-   pasting the repo file into each.
+3. Click **+** and add each of `battle.lua`, `fx.lua`, `screens.lua` and `gen.lua`, named
+   exactly, pasting the repo file into each.
 4. **Choose image** to add the Pokeball icon if you want it.
 5. Badge off, USB data cable in, badge on. **Connect**, choose **USB JTAG/serial debug unit**.
 6. **Push**. The console should list `slug=hackamon` with all the files.
 7. Click **Reboot** the first time, since the manifest sets a 96 KB Lua quota.
 8. Open Hackamon from the launcher.
+
+Push never deletes files on the badge. If an older layout left extra files in
+`/littlefs/apps/hackamon`, remove them with `rm` in the IDE console; Share allows at
+most 16 files and this app uses 15 including its eight sprite images.
+
+## Testing off the badge
+
+`python tools/run_harness.py` runs the whole game under Lua 5.5 with a mock badge API
+(needs `pip install lupa`): first-launch render, title, wipe, home, scan, a battle with
+a mid-battle switch, and exit. It catches Lua errors and bad widget calls, not visuals.
 
 If the console says `cannot open .../data.lua`, the second file is missing or misnamed.
 If it says `main.lua is not a regular file`, the code file in the workspace is not named
