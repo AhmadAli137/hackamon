@@ -16,7 +16,7 @@ SPR={
 }
 
 local N,BG,W=20,0xf8f8f0,44
-local acc={}
+local acc,job={},0
 local function px16(c)
   local v=(c//65536//8)*2048+((c//256)%256//4)*32+(c%256//8)
   return string.char(v%256,v//256)
@@ -24,9 +24,9 @@ end
 local function wd(i) return (i%5==0) and 3 or 2 end
 
 -- Parts 1..10 each render two sprite rows into acc; part 11 writes the file in one go.
-GEN=function(SP,id,mirror,name,part,fmt)
+local function render(id,mirror,name,part,fmt)
   if part==11 then badge.fs.write(name,table.concat(acc)) acc={} return end
-  local pal,spr=SP[id][1],SP[id][2]
+  local pal,spr=SPR[id][1],SPR[id][2]
   local keys={}
   for k in pairs(pal) do keys[#keys+1]=k end
   table.sort(keys)
@@ -71,4 +71,20 @@ GEN=function(SP,id,mirror,name,part,fmt)
     end
     acc[#acc+1]=string.rep(row,wd(y))
   end
+end
+
+-- One step of the first-launch sequence: 8 images x 11 parts. Returns true when all are
+-- written. Also removes appdata copies left by an earlier build so they do not count
+-- against the storage quota.
+GEN=function()
+  if job==0 then
+    for i=1,4 do badge.fs.remove("appdata/s"..i..".bin") badge.fs.remove("appdata/m"..i..".bin") end
+  end
+  job=job+1
+  local k=(job-1)//11+1
+  local id,mirror=(k+1)//2,(k%2==0)
+  -- Pikachu (id 1) is rendered 4-bit indexed as the transparency / RAM trial.
+  render(id,mirror,(mirror and "m" or "s")..id..".bin",(job-1)%11+1,id==1 and "i4" or "rgb")
+  if job%3==0 then collectgarbage("collect") end
+  return job>=88
 end

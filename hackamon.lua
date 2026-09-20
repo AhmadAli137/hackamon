@@ -25,7 +25,7 @@ local P={
 }
 local BIT,SUP,TP={1,2,4,8},{3,1,2,2},{"fire","water","grass","elec"}
 local TN={"FIRE","WATER","GRASS","ELECTRIC"}
-local S,cur,act,owned,seen,nfc,nxt,job=0,1,1,1,1,false,0,0
+local S,cur,act,owned,seen,nfc,nxt=0,1,1,1,1,false,0
 local me,en,team={},{},{}
 local q,qi,after={},0,nil
 local R,EN,EB,EH,PN,PB,PH,MSG,MENU,BG,PI
@@ -179,10 +179,12 @@ local function scan(on)
     else MSG:set_text("NFC reader\nunavailable.") end
   elseif nfc then badge.nfc.disable() nfc=false end
 end
--- Sprite widgets need the image files, so they are created here; then the title runs.
+-- Sprite widgets need the image files, so they are created here. Battle effects load
+-- now too, while the heap is least fragmented; then the title runs.
 local function start()
   EI=badge.ui.image(R,spr(1,false)) EI:align("top_right",-10,6)
   PI=badge.ui.image(R,spr(act,true)) PI:align("bottom_left",14,-70) PI:hidden(true)
+  fx() log("fx loaded")
   S=7 require("title") gc()
 end
 
@@ -198,8 +200,7 @@ function on_enter(root)
   log(_VERSION.." ui lua "..badge.sys.heap())
   -- Render sprite images once, a few rows per tick. Bump the number when sprites change.
   if badge.store.get_int("imgs",0)~=6 then
-    S=9 job=1 EB:hidden(true) PB:hidden(true) MSG:set_text("First launch:\npreparing\nsprites...")
-    for i=1,4 do badge.fs.remove("appdata/s"..i..".bin") badge.fs.remove("appdata/m"..i..".bin") end
+    S=9 EB:hidden(true) PB:hidden(true) MSG:set_text("First launch:\npreparing\nsprites...")
     require("gen") gc() log("renderer loaded")
   else start() end
 end
@@ -207,13 +208,7 @@ end
 function on_tick()
   local now=badge.sys.ms()
   if S==9 then
-    -- 8 images x 11 parts (10 render, 1 write), a full collection after each.
-    local k=(job-1)//11+1
-    -- Pikachu (id 1) is rendered 4-bit indexed as the transparency / RAM experiment.
-    local id=(k+1)//2
-    GEN(SPR,id,k%2==0,spr(id,k%2==0),(job-1)%11+1,id==1 and "i4" or "rgb")
-    job=job+1 gc()
-    if job>88 then GEN=nil SPR=nil gc() badge.store.set_int("imgs",6) log("renderer dropped") start() end
+    if GEN() then GEN=nil SPR=nil gc() badge.store.set_int("imgs",6) log("renderer dropped") start() end
     return
   end
   if TITLE and TITLE.tick(now) then TITLE=nil gc() log("title dropped") end
