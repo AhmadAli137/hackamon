@@ -27,7 +27,7 @@ local BIT,SUP,TP={1,2,4,8},{3,1,2,2},{"fire","water","grass","elec"}
 local S,cur,act,owned,nfc,nxt=0,1,1,1,false,0
 local me,en,team={},{},{}
 local q,qi,after={},0,nil
-local R,EN,EB,EH,PN,PB,PH,MSG,MENU,BG,PI
+local R,EN,EB,EH,PN,PB,PH,MSG,MENU,CUE,BG,PI
 -- W (widgets), EI (enemy image), UI_ROOT and TITLE are globals shared with the one-shot modules.
 
 local function own(i) return (owned//BIT[i])%2==1 end
@@ -52,7 +52,9 @@ local function bars(n,mh,mm,eh)
   PN:set_text(n) PH:set_text(mh.."/ "..mm) bar(PB,mh,mm)
   if en.id then EN:set_text(P[en.id][1]) EH:set_text(eh.."/ "..en.max) bar(EB,eh,en.max) end
 end
+-- A menu shares the box: prompt on the left, choices in a wider column on the right.
 local function menu(t)
+  MSG:set_size(118,58) CUE:hidden(true)
   local s=""
   for i=1,#t do s=s..(i==cur and "> " or "  ")..t[i].."\n" end
   MENU:set_text(s)
@@ -71,9 +73,10 @@ local function advance()
     if e[7] then FX.start(e[7],e[6]) end
     return
   end
-  q,qi={},0 local f=after after=nil if f then f() end
+  q,qi={},0 CUE:hidden(true) local f=after after=nil if f then f() end
 end
-local function say(f) after=f S=4 MENU:set_text("") advance() end
+-- Dialogue lines get the whole box.
+local function say(f) after=f S=4 MENU:set_text("") MSG:set_size(272,58) advance() end
 
 local function home()
   S=0 cur=1 en={} me=side(act) gc() fx()
@@ -182,7 +185,7 @@ function on_enter(root)
   act=badge.store.get_int("act",1) owned=badge.store.get_int("owned",1)
   if not own(act) then act=1 end
   UI_ROOT=root W=require("ui") gc()
-  EN,EB,EH,PN,PB,PH,MSG,MENU,BG=W.EN,W.EB,W.EH,W.PN,W.PB,W.PH,W.MSG,W.MENU,W.BG
+  EN,EB,EH,PN,PB,PH,MSG,MENU,CUE,BG=W.EN,W.EB,W.EH,W.PN,W.PB,W.PH,W.MSG,W.MENU,W.CUE,W.BG
   log(_VERSION.." ui lua "..badge.sys.heap())
   -- Render sprite images once, a few rows per tick. Bump the number when sprites change.
   if badge.store.get_int("imgs",0)~=7 then
@@ -199,6 +202,7 @@ function on_tick()
   end
   if TITLE and TITLE.tick(now) then TITLE=nil gc() log("title dropped") end
   if FX then FX.tick(now) end
+  if S==4 then CUE:hidden(FX.busy() or (now//400)%2==1) end
   if S~=2 or not nfc or now<nxt then return end
   nxt=now+300
   if not badge.nfc.card() then return end
